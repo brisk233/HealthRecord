@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/today/today",
+    "pages/onboarding/onboarding",
+    "pages/meals/meals",
+    "pages/fitness/fitness",
+    "pages/fridge/fridge",
+    "pages/profile/profile",
+    "pages/prep/prep"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#2FB287",
+    "navigationBarTitleText": "欢洋生活",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F4FAF7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#9AA8A2",
+    "selectedColor": "#2FB287",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/today/today",
+        "text": "🏠 今日"
+      },
+      {
+        "pagePath": "pages/meals/meals",
+        "text": "📅 菜单"
+      },
+      {
+        "pagePath": "pages/fitness/fitness",
+        "text": "💪 健身"
+      },
+      {
+        "pagePath": "pages/fridge/fridge",
+        "text": "🧊 冰箱"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "👤 我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {
+    "privacy-popup": "/components/privacy-popup/privacy-popup"
+  }
+}

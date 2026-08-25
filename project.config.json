@@ -1,0 +1,18 @@
+{
+  "appid": "wx2972567500c1b1fa",
+  "projectname": "shilianjia",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false,
+    "minifyWXML": true
+  },
+  "condition": {},
+  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/",
+  "simulatorPluginLibVersion": {}
+}

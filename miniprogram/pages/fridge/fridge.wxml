@@ -1,0 +1,28 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="card">
+    <view class="card-title">🧊 冰箱库存</view>
+    <view class="list-note">共 {{items.length}} 件 · 临期 {{expCount}} 件 · 已过期 {{badCount}} 件</view>
+  </view>
+  <view class="card" wx:if="{{items.length === 0}}">
+    <view class="empty"><text class="emoji">🧊</text>冰箱空空如也<view class="muted">备完菜记得入库哦</view></view>
+  </view>
+  <view class="card" wx:for="{{items}}" wx:key="id">
+    <view class="row">
+      <view style="display:flex;align-items:center;"><view class="dot {{item.status.cls}}"></view><text style="font-weight:600;">{{item.name}}</text></view>
+      <text class="tag {{item.status.cls}}">{{item.status.text}}</text>
+    </view>
+    <view class="muted">{{item.catLabel}} · {{item.box}} · 入库 {{item.purchased}} · 建议 {{item.suggested}} 前（剩 {{item.daysLeft}} 天）</view>
+    <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
+    <button class="btn-ghost btn-sm" hover-class="btn-hover" data-id="{{item.id}}" bindtap="eatItem">吃掉了</button>
+  </view>
+  <view class="card">
+    <view class="card-title">➕ 食材入库</view>
+    <input class="input" placeholder="食材名称，如：吊龙" value="{{form.name}}" bindinput="onName"/>
+    <picker range="{{cats}}" value="{{form.catIdx}}" bindchange="onCat">
+      <view class="input">分类：{{cats[form.catIdx]}}（保质期 {{catsDays[form.catIdx]}} 天）</view>
+    </picker>
+    <input class="input" placeholder="存放位置，如：冷藏盒②" value="{{form.box}}" bindinput="onBox"/>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="addItem">📦 入库</button>
+  </view>
+</view>

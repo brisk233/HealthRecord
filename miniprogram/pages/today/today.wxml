@@ -1,0 +1,71 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="hero" bindtap="goFamily">
+    <view>
+      <view class="date">{{dateText}}</view>
+      <view class="sub">{{greet}} · 我 · {{person.goal}}中 💪</view>
+      <view class="sub" style="font-size:20rpx;margin-top:6rpx;">{{familyJoined ? '🏠 家庭同步中 · 点击查看' : '🏠 未加入家庭 · 点击创建'}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">⭐ 今日习惯 · {{habitDone}}/{{habits.length}}</view>
+    <view class="row" wx:for="{{habits}}" wx:key="key" bindtap="toggleHabit" data-key="{{item.key}}">
+      <text>{{item.icon}} {{item.name}}</text>
+      <view style="display:flex;align-items:center;">
+        <text class="tag" wx:if="{{item.streak > 0}}" style="margin-right:8rpx;">🔥{{item.streak}}天</text>
+        <text class="tag {{item.done?'':'warn'}}">{{item.done ? '✅' : '待打卡'}}</text>
+      </view>
+    </view>
+    <view class="list-note" wx:if="{{habits.length === 0}}">去「我的 → 完善生活方式」生成专属习惯，或自定义添加</view>
+  </view>
+
+  <view class="card" wx:if="{{expiring.length > 0}}">
+    <view class="card-title">⏰ 今日建议吃 · 临期优先</view>
+    <view class="row" wx:for="{{expiring}}" wx:key="id">
+      <view style="display:flex;align-items:center;"><view class="dot {{item.status.cls}}"></view><text>{{item.name}}</text></view>
+      <text class="muted" style="margin:0;">{{item.status.text}} · {{item.box}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{modMeals}}">
+    <view class="card-title">🍚 今日三餐 · 主食米饭</view>
+    <view class="meal"><view class="meal-label">🌅</view><view class="meal-body">外买：包子/馒头/玉米，偶尔在家热<view class="muted">补剂按下方打卡的服用时间随餐</view></view></view>
+    <view class="meal"><view class="meal-label">🥡</view><view class="meal-body">便当：前晚多做一份 + 米饭<view class="muted">明天忙可点「多做一份」</view></view></view>
+    <view class="meal" wx:if="{{fridgeEmpty}}"><view class="meal-label">🍲</view><view class="meal-body">冰箱空空如也 🛒<view class="muted">去「冰箱」入库或按「菜单 → 备菜」采购</view></view></view>
+    <view class="meal" wx:else><view class="meal-label">🍲</view><view class="meal-body">{{menu.dinner}} + {{menu.side}}<view class="muted">取盒：{{menu.box}} · {{menu.method}} · {{menu.cookTime}} · 蛋白约 {{menu.proteinG}}g/人</view></view></view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">✅ 三餐打卡 · {{mealDone}}/3</view>
+    <view class="row" bindtap="tapMeal" data-k="b">
+      <text>🌅 早餐</text>
+      <text class="tag {{meals.b?'':'warn'}}">{{meals.b ? mealLabels[meals.b] : '点此打卡'}}</text>
+    </view>
+    <view class="row" bindtap="tapMeal" data-k="l">
+      <text>🥡 午餐</text>
+      <text class="tag {{meals.l?'':'warn'}}">{{meals.l ? mealLabels[meals.l] : '点此打卡'}}</text>
+    </view>
+    <view class="row" bindtap="tapMeal" data-k="d">
+      <text>🍲 晚餐</text>
+      <text class="tag {{meals.d?'':'warn'}}">{{meals.d ? mealLabels[meals.d] : '点此打卡'}}</text>
+    </view>
+    <view class="list-note">没做饭也能记：外卖 / 聚餐 / 外食都算数，打卡同步到 TA 的手机</view>
+  </view>
+
+  <view class="card" wx:if="{{person.suppEnabled !== false && supps.length > 0 && modSupps}}">
+    <view class="card-title">💊 补剂打卡</view>
+    <view class="row" wx:for="{{supps}}" wx:key="key">
+      <view style="flex:1;"><text>{{item.name}} · {{item.dose}}</text><view class="muted">{{item.time}}</view></view>
+      <switch checked="{{item.done}}" data-key="{{item.key}}" bindchange="toggleSupp" color="#2FB287"/>
+    </view>
+    <view class="list-note">已完成 {{suppDone}}/{{supps.length}} 项 · 可在「我的」页自定义补剂</view>
+  </view>
+
+  <view class="card" wx:if="{{modFitness}}">
+    <view class="card-title">💪 今日训练 · {{person.name}}</view>
+    <view class="row"><text style="font-weight:600;">{{train.title}}</text><text class="tag">{{train.time}}</text></view>
+    <view class="muted">{{train.detail}}</view>
+    <button class="btn-primary {{train.checked?'btn-ghost':''}}" hover-class="btn-hover" bindtap="trainCheck">{{train.checked ? '✅ 已打卡' : '✅ 打卡'}}</button>
+  </view>
+</view>

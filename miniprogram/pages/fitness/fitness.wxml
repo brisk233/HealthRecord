@@ -1,0 +1,73 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="hero">
+    <view>
+      <view class="date">本周健身</view>
+      <view class="sub">我 · 连续打卡 {{streak}} 天 🔥</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{moduleOff}}">
+    <view class="empty"><text class="emoji">🏃</text>运动模块未开启<view class="muted">到「我的 → 功能模块」开启后使用（老数据保留）</view></view>
+  </view>
+  <block wx:else>
+  <view class="card">
+    <view class="card-title">🎾 自定义运动打卡</view>
+    <view style="display:flex;flex-wrap:wrap;">
+      <view class="chip {{customType==='篮球'?'on':''}}" bindtap="pickType" data-t="篮球">🏀 篮球</view>
+      <view class="chip {{customType==='羽毛球'?'on':''}}" bindtap="pickType" data-t="羽毛球">🏸 羽毛球</view>
+      <view class="chip {{customType==='其他'?'on':''}}" bindtap="pickType" data-t="其他">✍️ 其他</view>
+    </view>
+    <input wx:if="{{customType==='其他'}}" class="input" placeholder="运动名称，如：骑行 / 游泳" value="{{customName}}" bindinput="onCustomName"/>
+    <view class="muted" style="margin-top:4rpx;">时长</view>
+    <view style="display:flex;flex-wrap:wrap;margin-top:8rpx;">
+      <view class="chip {{customMinutes===30?'on':''}}" bindtap="pickMin" data-m="30">30分钟</view>
+      <view class="chip {{customMinutes===45?'on':''}}" bindtap="pickMin" data-m="45">45分钟</view>
+      <view class="chip {{customMinutes===60?'on':''}}" bindtap="pickMin" data-m="60">60分钟</view>
+      <view class="chip {{customMinutes===90?'on':''}}" bindtap="pickMin" data-m="90">90分钟</view>
+    </view>
+    <view class="row" wx:if="{{todayCustom}}">
+      <text class="tag">今日已记：{{todayCustom.type}} · {{todayCustom.minutes}}分钟</text>
+      <button class="btn-ghost btn-sm" hover-class="btn-hover" bindtap="cancelCustom">取消</button>
+    </view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="checkinCustom">{{todayCustom ? '🔄 更新' : '✅ 打卡运动'}}</button>
+  </view>
+
+  <view class="card">
+    <view class="card-title">⚡ 今日训练 · {{person.name}}</view>
+    <view class="row"><text style="font-weight:600;">{{today.title}}</text><text class="tag">{{today.time}}</text></view>
+    <view class="muted">{{today.detail}}</view>
+    <button class="btn-primary {{today.checked?'btn-ghost':''}}" hover-class="btn-hover" bindtap="checkin">{{today.checked ? '✅ 已打卡' : '✅ 打卡'}}</button>
+  </view>
+
+  <view class="card">
+    <view class="card-title">🗓️ 本周课表 <text class="muted" style="font-size:22rpx;">拖住 ☰ 调整顺序</text></view>
+    <view class="row drag-row" wx:for="{{week}}" wx:key="date" style="opacity:{{dragIdx===index?0.55:1}};">
+      <view style="display:flex;align-items:center;flex:1;">
+        <view class="drag-handle" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" data-idx="{{index}}">☰</view>
+        <view style="flex:1;">
+          <text style="{{item.isToday?'font-weight:800;':''}}">{{item.weekday}}{{item.isToday ? ' · 今天' : ''}}</text>
+          <view class="muted">{{item.title}} · {{item.time}}</view>
+        </view>
+      </view>
+      <text class="tag {{item.checked?'':'warn'}}">{{item.checked ? '✅ 完成' : (item.isToday ? '待打卡' : '未完成')}}</text>
+    </view>
+    <button class="btn-ghost" hover-class="btn-hover" bindtap="resetOrder">↩️ 恢复默认课表</button>
+  </view>
+
+  <view class="card" wx:if="{{records.length > 0}}">
+    <view class="card-title">📈 最近打卡</view>
+    <view class="row" wx:for="{{records}}" wx:key="date">
+      <text>{{item.weekday}} {{item.date}}</text>
+      <text class="tag">{{item.title}}</text>
+    </view>
+  </view>
+
+  <view class="card" wx:for="{{lib}}" wx:key="group" wx:for-item="g">
+    <view class="card-title">🏋️ {{g.group}} <text class="muted" style="font-size:22rpx;">{{g.where}}</text></view>
+    <view class="row" wx:for="{{g.items}}" wx:key="name" wx:for-item="it">
+      <text>{{it.name}}</text><text class="muted" style="margin:0;">{{it.set}}</text>
+    </view>
+  </view>
+  </block>
+</view>

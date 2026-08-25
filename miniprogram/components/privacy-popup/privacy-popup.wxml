@@ -1,0 +1,10 @@
+<view class="pp-mask" wx:if="{{show}}">
+  <view class="pp-box">
+    <view class="pp-title">用户隐私保护提示</view>
+    <view class="pp-content">欢洋生活会获取你的微信昵称、头像，用于在家庭中展示成员身份；并获取微信 openid 用于识别账号、同步家庭数据（冰箱库存、菜单、打卡记录等）。以上信息仅用于本小程序功能，不会用于任何其他用途。使用前请阅读并同意<button class="pp-link" open-type="openPrivacyContract">《用户隐私保护指引》</button></view>
+    <view class="pp-btns">
+      <button class="pp-btn pp-refuse" bindtap="onRefuse">拒绝</button>
+      <button class="pp-btn pp-agree" bindtap="onAgree">同意并继续</button>
+    </view>
+  </view>
+</view>

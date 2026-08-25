@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+miniprogram_npm/
+
+# WeChat DevTools private config
+project.private.config.json
+
+# logs & OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

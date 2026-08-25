@@ -1,0 +1,25 @@
+// 菜谱库 v2：22 道 · proteinG/kcal 为每人份估算 · elements 为营养元素标签
+module.exports = [
+  { id: 1, name: '番茄炖牛腩', main: '牛腩', veg: '胡萝卜', method: '炖', cookTime: '备菜日炖好·复热15分钟', box: '牛腩盒', tags: ['高蛋白','补铁','补锌'], elements: ['铁','锌','维A'], proteinG: 35, kcal: 320 },
+  { id: 2, name: '牛腩萝卜汤', main: '牛腩', veg: '胡萝卜', method: '炖', cookTime: '复热10分钟', box: '牛腩盒', tags: ['高蛋白','补铁'], elements: ['铁','锌'], proteinG: 32, kcal: 280 },
+  { id: 3, name: '吊龙炒辣椒', main: '吊龙', veg: '辣椒', method: '快炒', cookTime: '15分钟', box: '吊龙盒+辣椒盒', tags: ['高蛋白','低脂','维C'], elements: ['铁','锌','维C'], proteinG: 30, kcal: 260, spicy: 2 },
+  { id: 4, name: '牛肉滑蛋饭', main: '吊龙', veg: '-', method: '快炒', cookTime: '15分钟', box: '吊龙盒+鸡蛋', tags: ['高蛋白'], elements: ['铁','锌','维D'], proteinG: 33, kcal: 380 },
+  { id: 5, name: '清蒸鲈鱼', main: '鲈鱼', veg: '-', method: '蒸', cookTime: '20分钟', box: '鲈鱼袋', tags: ['优质蛋白','Omega-3'], elements: ['Omega-3','维D'], proteinG: 30, kcal: 220 },
+  { id: 6, name: '虾仁滑蛋', main: '虾仁', veg: '-', method: '快炒', cookTime: '15分钟', box: '虾仁盒+鸡蛋', tags: ['补锌','优质蛋白'], elements: ['锌'], proteinG: 28, kcal: 240 },
+  { id: 7, name: '蒜蓉蒸虾', main: '基围虾', veg: '-', method: '蒸', cookTime: '15分钟', box: '虾', tags: ['补锌','低脂'], elements: ['锌'], proteinG: 30, kcal: 200 },
+  { id: 8, name: '白灼基围虾', main: '基围虾', veg: '-', method: '白灼', cookTime: '15分钟', box: '虾', tags: ['补锌','低脂'], elements: ['锌'], proteinG: 30, kcal: 200 },
+  { id: 9, name: '辣椒炒肉', main: '猪肉', veg: '辣椒', method: '快炒', cookTime: '15分钟', box: '肉片盒+辣椒盒', tags: ['B族','维C'], elements: ['维C','B1'], proteinG: 26, kcal: 300, spicy: 2 },
+  { id: 10, name: '胡萝卜炒肉丝', main: '猪肉', veg: '胡萝卜', method: '快炒', cookTime: '15分钟', box: '肉丝盒+胡萝卜盒', tags: ['维A'], elements: ['维A','B1'], proteinG: 26, kcal: 290 },
+  { id: 11, name: '猪肉丸子汤', main: '猪肉', veg: '叶子菜', method: '煮', cookTime: '20分钟', box: '肉末+叶菜盒', tags: ['优质蛋白','叶酸'], elements: ['叶酸','钙'], proteinG: 25, kcal: 260 },
+  { id: 12, name: '番茄炒蛋', main: '鸡蛋', veg: '番茄', method: '快炒', cookTime: '10分钟', box: '鸡蛋', tags: ['优质蛋白','维D'], elements: ['维D'], proteinG: 16, kcal: 200 },
+  { id: 13, name: '虾仁蒸蛋羹', main: '鸡蛋', veg: '-', method: '蒸', cookTime: '15分钟', box: '鸡蛋+虾仁', tags: ['优质蛋白','锌'], elements: ['锌','维D'], proteinG: 18, kcal: 190 },
+  { id: 14, name: '胡萝卜炒蛋', main: '鸡蛋', veg: '胡萝卜', method: '快炒', cookTime: '10分钟', box: '鸡蛋+胡萝卜盒', tags: ['维A','优质蛋白'], elements: ['维A','维D'], proteinG: 14, kcal: 210 },
+  { id: 15, name: '辣椒炒蛋', main: '鸡蛋', veg: '辣椒', method: '快炒', cookTime: '10分钟', box: '鸡蛋+辣椒盒', tags: ['维C','优质蛋白'], elements: ['维C'], proteinG: 14, kcal: 200, spicy: 2 },
+  { id: 16, name: '涮牛肉锅', main: '吊龙', veg: '叶子菜', method: '涮', cookTime: '30分钟', box: '剩余食材', tags: ['高蛋白','家庭餐'], elements: ['铁','锌','叶酸'], proteinG: 35, kcal: 380 },
+  { id: 17, name: '蒜蓉西兰花', main: '-', veg: '西兰花', method: '快炒', cookTime: '8分钟', box: '西兰花盒', tags: ['维C','叶酸','纤维'], elements: ['维C','叶酸'], proteinG: 4, kcal: 90 },
+  { id: 18, name: '凉拌西兰花', main: '-', veg: '西兰花', method: '凉拌', cookTime: '8分钟', box: '西兰花盒', tags: ['维C','纤维'], elements: ['维C'], proteinG: 4, kcal: 70 },
+  { id: 19, name: '蚝油叶子菜', main: '-', veg: '叶子菜', method: '快炒', cookTime: '8分钟', box: '叶菜盒', tags: ['叶酸','钙','纤维'], elements: ['叶酸','钙'], proteinG: 3, kcal: 60 },
+  { id: 20, name: '清炒胡萝卜丝', main: '-', veg: '胡萝卜', method: '快炒', cookTime: '8分钟', box: '胡萝卜盒', tags: ['维A','纤维'], elements: ['维A'], proteinG: 2, kcal: 80 },
+  { id: 21, name: '上汤叶子菜', main: '-', veg: '叶子菜', method: '煮', cookTime: '10分钟', box: '叶菜盒', tags: ['叶酸','钙'], elements: ['叶酸','钙'], proteinG: 3, kcal: 65 },
+  { id: 22, name: '水煮蛋+牛奶(早餐)', main: '鸡蛋', veg: '-', method: '煮', cookTime: '5分钟', box: '鸡蛋', tags: ['钙','优质蛋白'], elements: ['钙','维D'], proteinG: 15, kcal: 250 }
+];

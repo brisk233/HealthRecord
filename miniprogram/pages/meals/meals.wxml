@@ -1,0 +1,95 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="hero">
+    <view style="display:flex;align-items:center;justify-content:space-between;">
+      <view class="date">本周安排</view>
+      <view class="seg">
+        <view class="seg-item {{seg==='menu'?'on':''}}" bindtap="switchSeg" data-seg="menu">📅 菜单</view>
+        <view class="seg-item {{seg==='prep'?'on':''}}" bindtap="switchSeg" data-seg="prep">🧺 备菜</view>
+      </view>
+    </view>
+  </view>
+
+  <block wx:if="{{seg==='menu'}}">
+    <view class="card">
+      <view class="card-title">📅 本周菜单（冰箱库存 + 临期优先自动生成）</view>
+      <view class="list-note">早餐外买 · 主食米饭 · 拖住行首 ☰ 可交换两天的菜</view>
+      <view class="row"><text>💪 他 · 蛋白目标</text><text class="tag">{{targets.male}}g/天</text></view>
+      <view class="row"><text>💃 她 · 蛋白目标</text><text class="tag pink">{{targets.female}}g/天</text></view>
+    </view>
+    <view class="card" wx:if="{{fridgeEmpty}}">
+      <view class="empty"><text class="emoji">🧊</text>冰箱空空如也，暂无食材可排菜单<view class="muted">先去「冰箱」入库，或切到「备菜」按采购清单买齐后入库，菜单会自动生成</view></view>
+      <button class="btn-primary" hover-class="btn-hover" bindtap="goFridge">🧊 去入库</button>
+    </view>
+    <block wx:if="{{!fridgeEmpty}}">
+    <view class="card drag-row" wx:for="{{days}}" wx:key="date" style="opacity:{{dragIdx===index?0.55:1}};">
+      <view class="row">
+        <view style="display:flex;align-items:center;flex:1;">
+          <view class="drag-handle" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" data-idx="{{index}}">☰</view>
+          <text style="font-weight:700;">{{item.weekday}} {{item.date}}{{item.isToday ? ' · 今天' : ''}}</text>
+        </view>
+        <text class="tag">{{item.cookTime}}</text>
+      </view>
+      <view style="font-weight:600;margin-top:4rpx;">{{item.dinner}} + {{item.side}}</view>
+      <view class="muted">取盒：{{item.box}} · {{item.method}} · 约 {{item.proteinG}}g蛋白/人（{{item.kcal}}kcal）</view>
+      <view style="display:flex;flex-wrap:wrap;padding-top:8rpx;">
+        <text class="tag" style="margin:4rpx 8rpx 0 0;" wx:for="{{item.elements}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="row" style="margin-top:8rpx;">
+        <text class="muted" style="margin:0;">他 {{item.totalG}}/{{targets.male}}g</text>
+        <view class="bar-wrap"><view class="bar" style="width:{{item.pM}}%;"></view></view>
+      </view>
+      <view class="row">
+        <text class="muted" style="margin:0;">她 {{item.totalG}}/{{targets.female}}g</text>
+        <view class="bar-wrap"><view class="bar pink" style="width:{{item.pF}}%;"></view></view>
+      </view>
+      <view class="muted">{{item.purchased ? (item.gapM > 0 ? '他 缺口 ' + item.gapM + 'g → ' + item.tipM : '他 达标 ✓') : '他：采购后自动安排'}}</view>
+      <view class="muted">{{item.purchased ? (item.gapF > 0 ? '她 缺口 ' + item.gapF + 'g → ' + item.tipF : '她 达标 ✓') : '她：采购后自动安排'}}</view>
+      <view class="muted" wx:if="{{item.missing.length}}" style="color:#C97B0E;">缺料：{{item.missing}}</view>
+    </view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="regen">🔄 重新生成</button>
+    <button class="btn-ghost" hover-class="btn-hover" bindtap="resetMenu">↩️ 恢复默认</button>
+    </block>
+  </block>
+
+  <block wx:else>
+    <view class="card" wx:if="{{missing.length > 0}}">
+      <view class="card-title">🛒 缺料清单（冰箱自动比对）</view>
+      <view class="row" wx:for="{{missing}}" wx:key="*this">
+        <text>{{item}}</text><text class="tag warn">本周缺</text>
+      </view>
+    </view>
+    <view class="card">
+      <view class="card-title">🧾 采购清单</view>
+      <view class="row">
+        <text class="muted" style="margin:0;">已买 {{buyDone}}/{{purchase.length}}</text>
+        <view class="bar-wrap"><view class="bar" style="width:{{buyPct}}%;"></view></view>
+        <text class="tag" style="margin-left:12rpx;flex-shrink:0;" bindtap="toggleAllBuy">{{allBought ? '取消全选' : '一键全选'}}</text>
+      </view>
+      <view class="row" wx:for="{{purchase}}" wx:key="name">
+        <view><text>{{item.name}}</text><text class="muted" style="margin-left:12rpx;">{{item.zone}}</text></view>
+        <view style="display:flex;align-items:center;">
+          <text>{{item.amount}}</text>
+          <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleBuy" style="margin-left:12rpx;" color="#2FB287"/>
+        </view>
+      </view>
+    </view>
+    <view class="card">
+      <view class="card-title">🔪 周日备菜 · 约 2 小时</view>
+      <view class="row">
+        <text class="muted" style="margin:0;">完成 {{stepDone}}/{{steps.length}}</text>
+        <view class="bar-wrap"><view class="bar" style="width:{{stepPct}}%;"></view></view>
+        <text class="tag" style="margin-left:12rpx;flex-shrink:0;" bindtap="toggleAllSteps">{{allSteps ? '取消全选' : '一键全选'}}</text>
+      </view>
+      <view class="row" wx:for="{{steps}}" wx:key="t">
+        <text class="tag">{{item.t}}</text>
+        <view style="flex:1;margin:0 16rpx;">{{item.task}}</view>
+        <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleStep" color="#2FB287"/>
+      </view>
+      <view class="list-note">分装标签规则：每盒 = 菜名 + 计划食用日 + 做法（如「吊龙·周二炒」）</view>
+    </view>
+    <view class="card" wx:if="{{missing.length === 0}}">
+      <view class="empty"><text class="emoji">🎉</text>冰箱食材齐全，无需补货</view>
+    </view>
+  </block>
+</view>

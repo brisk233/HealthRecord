@@ -1,0 +1,39 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="card" wx:if="{{missing.length > 0}}">
+    <view class="card-title">🛒 缺料清单（冰箱自动比对）</view>
+    <view class="row" wx:for="{{missing}}" wx:key="*this">
+      <text>{{item}}</text><text class="tag warn">本周缺</text>
+    </view>
+  </view>
+  <view class="card">
+    <view class="card-title">🧾 采购清单</view>
+    <view class="row">
+      <text class="muted" style="margin:0;">已买 {{buyDone}}/{{purchase.length}}</text>
+      <view class="bar-wrap"><view class="bar" style="width:{{buyPct}}%;"></view></view>
+    </view>
+    <view class="row" wx:for="{{purchase}}" wx:key="name">
+      <view><text>{{item.name}}</text><text class="muted" style="margin-left:12rpx;">{{item.zone}}</text></view>
+      <view style="display:flex;align-items:center;">
+        <text>{{item.amount}}</text>
+        <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleBuy" style="margin-left:12rpx;" color="#2FB287"/>
+      </view>
+    </view>
+  </view>
+  <view class="card">
+    <view class="card-title">🔪 周日备菜 · 约 2 小时</view>
+    <view class="row">
+      <text class="muted" style="margin:0;">完成 {{stepDone}}/{{steps.length}}</text>
+      <view class="bar-wrap"><view class="bar" style="width:{{stepPct}}%;"></view></view>
+    </view>
+    <view class="row" wx:for="{{steps}}" wx:key="t">
+      <text class="tag">{{item.t}}</text>
+      <view style="flex:1;margin:0 16rpx;">{{item.task}}</view>
+      <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleStep" color="#2FB287"/>
+    </view>
+    <view class="list-note">分装标签规则：每盒 = 菜名 + 计划食用日 + 做法（如「吊龙·周二炒」）</view>
+  </view>
+  <view class="card" wx:if="{{missing.length === 0}}">
+    <view class="empty"><text class="emoji">🎉</text>冰箱食材齐全，无需补货</view>
+  </view>
+</view>
