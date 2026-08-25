@@ -3,12 +3,22 @@ const cloudsync = require('./utils/cloudsync.js');
 
 App({
   globalData: {
-    version: '2.3.4',
+    version: '2.3.5',
     env: cloudsync.ENV,
     profile: null,
     fridge: []
   },
   onLaunch() {
+    // 临时诊断（定位后移除）：真机 JS 报错时弹窗显示错误内容
+    const showErr = function (err) {
+      try {
+        const msg = (err && (err.message || err.errMsg)) || String(err);
+        wx.showModal({ title: '页面出错', content: String(msg).slice(0, 200), showCancel: false });
+      } catch (e) {}
+    };
+    if (wx.onError) wx.onError(showErr);
+    if (wx.onUnhandledRejection) wx.onUnhandledRejection(showErr);
+
     const stored = wx.getStorageSync('profile');
     this.globalData.profile = (stored && stored.male && stored.female) ? stored : seed.defaultProfile;
     const fridge = wx.getStorageSync('fridge');
