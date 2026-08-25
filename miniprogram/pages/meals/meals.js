@@ -17,10 +17,20 @@ Page({
   },
   onShow() {
     this.refresh();
+    const cleanAtPullStart = cloudsync.fridgeSyncClean();
+    const versionAtPullStart = cloudsync.fridgeVersion();
     cloudsync.pullHome().then(function (home) {
       if (home) {
         if (home.profile) { app.globalData.profile = cloudsync.mergeProfile(app.globalData.profile, home.profile); wx.setStorageSync('profile', app.globalData.profile); }
-        if (home.fridge) { app.globalData.fridge = home.fridge; wx.setStorageSync('fridge', home.fridge); }
+        if (home.fridge) {
+          // 拉取期间冰箱本地有增删：以本地为准，避免旧数据复活已吃/覆盖新入库
+          if (!cleanAtPullStart || cloudsync.fridgeChangedSince(versionAtPullStart)) {
+            cloudsync.pushFridge(app.globalData.fridge);
+          } else {
+            app.globalData.fridge = home.fridge;
+            wx.setStorageSync('fridge', home.fridge);
+          }
+        }
         if (home.menuOverride !== undefined) wx.setStorageSync('menuOverride', home.menuOverride || {});
       }
       this.refresh();

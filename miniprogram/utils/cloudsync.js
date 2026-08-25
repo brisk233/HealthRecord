@@ -75,7 +75,14 @@ async function setRelation(relation) {
 function mergeProfile(local, remote) {
   if (!remote) return local;
   const out = { active: (local && local.active) || 'male' };
-  const ARR_GUARD = ['habits', 'favs', 'modules', 'favHidden'];
+  // 保留档案根级字段（如健身课表排序 trainOrder），避免合并时被丢弃
+  if (local) Object.keys(local).forEach(function (k) {
+    if (k !== 'male' && k !== 'female' && !(k in out)) out[k] = local[k];
+  });
+  if (remote) Object.keys(remote).forEach(function (k) {
+    if (k !== 'male' && k !== 'female' && !(k in out)) out[k] = remote[k];
+  });
+  const ARR_GUARD = ['habits', 'favs', 'modules', 'favHidden', 'tags', 'subTags'];
   function guardArrays(l, r, merged) {
     ARR_GUARD.forEach(function (arrKey) {
       const lArr = l[arrKey];
@@ -95,10 +102,19 @@ function mergeProfile(local, remote) {
     } else {
       // 本地更新/无时间戳 → 本地为主，云端只补本地缺失的字段（旧云端无法回退本地新改动）
       merged = Object.assign({}, l);
-      Object.keys(r).forEach(function (key) {
-        if (r[key] !== undefined && merged[key] === undefined) merged[key] = r[key];
-      });
-      guardArrays(l, r, merged);
+      // 退出登录后本机是默认档案（无 _t、数组全空）：云端即使没有 _t，也要把生活方式/喜好等数据补回来
+      const localUntouched = !(l._t || 0);
+      if (localUntouched) {
+        // 本机从未保存过（退出登录后的默认档案）：云端整体为准，含用户主动清空的数组
+        Object.keys(r).forEach(function (key) {
+          if (r[key] !== undefined) merged[key] = r[key];
+        });
+      } else {
+        Object.keys(r).forEach(function (key) {
+          if (r[key] !== undefined && merged[key] === undefined) merged[key] = r[key];
+        });
+        guardArrays(l, r, merged);
+      }
     }
     out[k] = merged;
   });
@@ -166,6 +182,36 @@ function pushHome(patch) {
     .catch(function (e) { console.warn('pushHome 失败', e); });
 }
 
+// 冰箱本地增删的全局单调序号 + 推送确认：跨页面拉取时防止云端旧数据把「已吃掉/新增」的食材复活
+let fridgeLocalChangeSeq = 0;
+let fridgePushedSeq = 0;
+function markFridgeLocalChange() { fridgeLocalChangeSeq += 1; }
+function fridgeVersion() { return fridgeLocalChangeSeq; }
+function fridgeSyncClean() { return fridgePushedSeq >= fridgeLocalChangeSeq; }
+function fridgeChangedSince(v) { return typeof v === 'number' && fridgeLocalChangeSeq > v; }
+function pushFridge(fridge) {
+  const seq = fridgeLocalChangeSeq;
+  if (!ready()) { fridgePushedSeq = Math.max(fridgePushedSeq, seq); return Promise.resolve(); }
+  return wx.cloud.callFunction({ name: 'family', data: { action: 'push', data: { fridge: fridge } } })
+    .then(function () { fridgePushedSeq = Math.max(fridgePushedSeq, seq); })
+    .catch(function (e) { console.warn('pushFridge 失败', e); });
+}
+
+// 提交使用建议（文字 + 图片 fileID），供开发者/家人查看
+async function suggestAdd(text, images) {
+  if (!wx.cloud) return { ok: false, err: '云不可用，请检查网络' };
+  try { return await callFamily({ action: 'suggestAdd', text: text || '', images: images || [] }); }
+  catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+
+async function suggestList() {
+  if (!wx.cloud) return [];
+  try {
+    const res = await callFamily({ action: 'suggestList' });
+    return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+  } catch (e) { console.warn('suggestList 失败', e); return []; }
+}
+
 async function hydrateTodayCheckins() {
   if (!ready()) return;
   try {
@@ -209,6 +255,8 @@ function requestRemind() {
 module.exports = {
   ENV: ENV, TEMPLATE_ID: TEMPLATE_ID, familyCode: familyCode, myGender: myGender, init: init,
   login: login, createFamily: createFamily, joinFamily: joinFamily, setRelation: setRelation, setGender: setGender, setName: setName, setAvatar: setAvatar, setNickname: setNickname, leaveFamily: leaveFamily, familyInfo: familyInfo, mergeProfile: mergeProfile,
-  pullHome: pullHome, pushHome: pushHome,
+  pullHome: pullHome, pushHome: pushHome, suggestAdd: suggestAdd, suggestList: suggestList,
+  markFridgeLocalChange: markFridgeLocalChange, fridgeVersion: fridgeVersion, fridgeSyncClean: fridgeSyncClean,
+  fridgeChangedSince: fridgeChangedSince, pushFridge: pushFridge,
   hydrateTodayCheckins: hydrateTodayCheckins, pushCheckin: pushCheckin, requestRemind: requestRemind
 };

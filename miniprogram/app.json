@@ -6,7 +6,9 @@
     "pages/fitness/fitness",
     "pages/fridge/fridge",
     "pages/profile/profile",
-    "pages/prep/prep"
+    "pages/prep/prep",
+    "pages/suggest/suggest",
+    "pages/suggestions/suggestions"
   ],
   "window": {
     "navigationBarBackgroundColor": "#2FB287",

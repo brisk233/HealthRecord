@@ -4,6 +4,23 @@ const lifestyle = require('../../data/lifestyle.js');
 
 Page({
   data: { MAJORS: lifestyle.MAJORS, selected: {}, subSelected: {}, subs: [], majorsCount: 0 },
+  onLoad() {
+    // 回显已保存的生活方式：再次进入时先显示当前选择，避免「修改」时看起来像没存
+    const me = cloudsync.myGender();
+    const person = (app.globalData.profile || {})[me] || {};
+    const selected = {};
+    (person.tags || []).forEach(function (t) {
+      const m = lifestyle.MAJORS.find(function (x) { return t.indexOf(x.name) !== -1; });
+      if (m) selected[m.key] = true;
+    });
+    const subSelected = {};
+    (person.subTags || []).forEach(function (s) { subSelected[s] = true; });
+    const subs = [];
+    Object.keys(selected).forEach(function (key) {
+      (lifestyle.SUBTAGS[key] || []).forEach(function (s) { if (subs.indexOf(s) === -1) subs.push(s); });
+    });
+    this.setData({ selected: selected, subSelected: subSelected, subs: subs, majorsCount: Object.keys(selected).length });
+  },
   toggleMajor(e) {
     const k = e.currentTarget.dataset.k;
     const selected = Object.assign({}, this.data.selected);

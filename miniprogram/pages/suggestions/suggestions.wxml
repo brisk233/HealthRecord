@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="card" wx:if="{{list.length === 0}}">
+    <view class="empty"><text class="emoji">💡</text>暂无建议<view class="muted">使用者在「我的 → 提交建议」提交后会显示在这里</view></view>
+  </view>
+  <view class="card" wx:for="{{list}}" wx:key="id">
+    <view class="row">
+      <text style="font-weight:600;">{{item.gender === 'female' ? '她' : '他'}} · {{item.nickname}}</text>
+      <text class="muted" style="margin:0;">{{item.dateText}}</text>
+    </view>
+    <view class="suggest-text-view" wx:if="{{item.text}}">{{item.text}}</view>
+    <view class="img-grid">
+      <view class="img-item" wx:for="{{item.images}}" wx:key="*this" wx:for-item="img">
+        <image src="{{img}}" mode="aspectFill" data-url="{{img}}" data-list="{{item.images}}" bindtap="previewImage"/>
+      </view>
+    </view>
+  </view>
+</view>

@@ -242,14 +242,28 @@ Page({
     wx.showToast({ title: '已添加', icon: 'success' });
   },
   onNewHabitName(e) { this.setData({ 'newHabit.name': e.detail.value }); },
-  onNewHabitIcon(e) { this.setData({ 'newHabit.icon': e.detail.value }); },
   onFreq(e) { this.setData({ freqIdx: Number(e.detail.value) }); },
+  autoHabitIcon(name) {
+    const rules = [
+      ['喝水', '💧'], ['水杯', '💧'], ['早睡', '😴'], ['睡觉', '😴'], ['睡前', '🌙'],
+      ['跑', '🏃'], ['运动', '🏃'], ['健身', '🏋️'], ['拉伸', '🤸'], ['瑜伽', '🧘'], ['冥想', '🧘'],
+      ['读书', '📖'], ['书', '📖'], ['单词', '🔤'], ['学习', '📚'], ['写作', '✍️'], ['练字', '✍️'],
+      ['日记', '📝'], ['记账', '🧾'], ['攒钱', '💰'], ['理财', '💰'],
+      ['泡脚', '🦶'], ['做饭', '🍳'], ['吃饭', '🍽️'], ['三餐', '🍽️'],
+      ['手机', '📵'], ['刷', '📵'], ['整理', '🧹'], ['家务', '🧹'], ['出门', '🚶']
+    ];
+    const n = String(name || '');
+    for (let i = 0; i < rules.length; i++) {
+      if (n.indexOf(rules[i][0]) !== -1) return rules[i][1];
+    }
+    return '⭐';
+  },
   addHabit() {
     const n = this.data.newHabit;
     if (!n.name) { wx.showToast({ title: '先填习惯名称', icon: 'none' }); return; }
     const person = app.globalData.profile[cloudsync.myGender()];
-    person.habits.push({ key: 'h' + Date.now(), name: n.name, icon: n.icon || '⭐', freq: this.data.freqs[this.data.freqIdx] });
-    this.setData({ newHabit: { name: '', icon: '' } });
+    person.habits.push({ key: 'h' + Date.now(), name: n.name, icon: this.autoHabitIcon(n.name), freq: this.data.freqs[this.data.freqIdx] });
+    this.setData({ newHabit: { name: '' } });
     this.saveProfile();
   },
   reGenHabits() {
@@ -355,8 +369,10 @@ Page({
     this.saveProfile();
   },
   // ===== 家庭 ======
-  editName() { this.setData({ editingName: true }); },
-  cancelName() { this.setData({ editingName: false, familyName: (this.data.family && this.data.family.name) || '我们的家' }); },
+  editName() {
+    if (this.data.myRole !== 'creator') return; // 仅创建者可改名
+    this.setData({ editingName: true });
+  },
   onNameInput(e) { this.setData({ familyName: e.detail.value }); },
   saveName() {
     const name = String(this.data.familyName || '').trim() || '我们的家';
@@ -416,12 +432,20 @@ Page({
   },
   copyCode() {
     if (!this.data.family) return;
-    wx.setClipboardData({ data: this.data.family.code, success: function () { wx.showToast({ title: '邀请码已复制', icon: 'success' }); } });
+    // 剪贴板属于隐私接口：先走隐私弹窗授权，再写入，避免审核回收权限后调用失败
+    const run = () => {
+      wx.setClipboardData({ data: this.data.family.code, success: function () { wx.showToast({ title: '邀请码已复制', icon: 'success' }); } });
+    };
+    const pp = this.selectComponent('#pp');
+    if (pp) pp.ensure(run); else run();
   },
   onShareAppMessage() {
     const code = this.data.family ? this.data.family.code : '';
     return { title: '加入我们的「欢洋生活」小家庭 🏠', path: '/pages/profile/profile?code=' + code };
   },
+  // ===== 使用建议 ======
+  goSuggest() { wx.navigateTo({ url: '/pages/suggest/suggest' }); },
+  goSuggestions() { wx.navigateTo({ url: '/pages/suggestions/suggestions' }); },
   // ===== 折叠与提醒 ======
   toggleLog() { this.setData({ logOpen: !this.data.logOpen }); },
   toggleBase() { this.setData({ baseOpen: !this.data.baseOpen }); },
@@ -430,7 +454,6 @@ Page({
   toggleHabitCard() { this.setData({ habitOpen: !this.data.habitOpen }); },
   toggleModCard() { this.setData({ modOpen: !this.data.modOpen }); },
   toggleSuppCard() { this.setData({ suppOpen: !this.data.suppOpen }); },
-  stopProp() {},
   openRemind() {
     const that = this;
     wx.requestSubscribeMessage({

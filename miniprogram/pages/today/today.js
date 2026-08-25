@@ -25,8 +25,18 @@ Page({
       this.setData({ familyJoined: !!info });
     }.bind(this)).catch(function () {});
     // 拉取另一半的最新冰箱数据
+    const cleanAtPullStart = cloudsync.fridgeSyncClean();
+    const versionAtPullStart = cloudsync.fridgeVersion();
     cloudsync.pullHome().then(function (home) {
-      if (home && home.fridge) { app.globalData.fridge = home.fridge; wx.setStorageSync('fridge', home.fridge); }
+      if (home && home.fridge) {
+        // 拉取期间冰箱本地有增删：以本地为准，避免旧数据复活已吃/覆盖新入库
+        if (!cleanAtPullStart || cloudsync.fridgeChangedSince(versionAtPullStart)) {
+          cloudsync.pushFridge(app.globalData.fridge);
+        } else {
+          app.globalData.fridge = home.fridge;
+          wx.setStorageSync('fridge', home.fridge);
+        }
+      }
       if (home && home.profile) { app.globalData.profile = cloudsync.mergeProfile(app.globalData.profile, home.profile); wx.setStorageSync('profile', app.globalData.profile); }
       this.refresh();
     }.bind(this)).catch(function () {});

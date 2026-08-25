@@ -16,7 +16,15 @@ Page({
   },
   onPullDownRefresh() { this.refresh(); this.pullCloud(function () { wx.stopPullDownRefresh(); }); },
   pullCloud(done) {
+    const cleanAtPullStart = cloudsync.fridgeSyncClean();
+    const versionAtPullStart = cloudsync.fridgeVersion();
     cloudsync.pullHome().then(function (home) {
+      // 拉取期间本地已有增删：以本地为准并重新推送，避免云端旧数据把刚吃的食材“复活”
+      if (!cleanAtPullStart || cloudsync.fridgeChangedSince(versionAtPullStart)) {
+        cloudsync.pushFridge(app.globalData.fridge);
+        if (done) done();
+        return;
+      }
       if (home && home.fridge) {
         app.globalData.fridge = home.fridge;
         wx.setStorageSync('fridge', home.fridge);
@@ -52,8 +60,9 @@ Page({
       purchased: date.todayStr(), note: ''
     };
     app.globalData.fridge.unshift(item);
+    cloudsync.markFridgeLocalChange();
     wx.setStorageSync('fridge', app.globalData.fridge);
-    cloudsync.pushHome({ fridge: app.globalData.fridge });
+    cloudsync.pushFridge(app.globalData.fridge);
     this.setData({ form: { name: '', catIdx: 0, box: '' } });
     buzz();
     wx.showToast({ title: '已入库 ✅', icon: 'success' });
@@ -62,9 +71,11 @@ Page({
   eatItem(e) {
     const id = e.currentTarget.dataset.id;
     app.globalData.fridge = app.globalData.fridge.filter(function (it) { return it.id !== id; });
+    cloudsync.markFridgeLocalChange();
     wx.setStorageSync('fridge', app.globalData.fridge);
-    cloudsync.pushHome({ fridge: app.globalData.fridge });
+    cloudsync.pushFridge(app.globalData.fridge);
     buzz();
     this.refresh();
+    wx.showToast({ title: '已吃掉 🍽️', icon: 'success' });
   }
 });

@@ -51,16 +51,17 @@ page {
 .input { border: 2rpx solid #E4EFEA; border-radius: 18rpx; padding: 16rpx 20rpx; margin-bottom: 16rpx; background: #FAFDFB; text-align: center; }
 .btn-primary, .btn-ghost {
   display: block;
-  width: 78%;
+  width: auto;
+  min-width: 220rpx;
   margin: 20rpx auto 0;
-  padding: 18rpx 0;
+  padding: 14rpx 44rpx;
   text-align: center;
   font-size: 28rpx;
   line-height: 1.5;
   font-weight: 600;
-  border-radius: 999rpx;
+  border-radius: 16rpx;
   white-space: nowrap;
-  letter-spacing: 2rpx;
+  letter-spacing: 1rpx;
 }
 .btn-primary {
   background: var(--grad);
@@ -69,7 +70,10 @@ page {
   box-shadow: 0 6rpx 18rpx rgba(47, 178, 135, 0.3);
 }
 .btn-ghost { background: #FFF; color: var(--brand-deep); border: 2rpx solid var(--brand); }
-.btn-sm { display: inline-block; width: auto; margin: 0; padding: 10rpx 30rpx; font-size: 24rpx; min-width: 0; letter-spacing: 0; line-height: 1.6; }
+.btn-sm { display: inline-block; width: auto; margin: 0; padding: 8rpx 24rpx; font-size: 24rpx; min-width: 0; letter-spacing: 0; line-height: 1.5; border-radius: 12rpx; }
+.family-name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 32rpx; letter-spacing: 2rpx; }
+.btn-add-fav { flex-shrink: 0; width: 150rpx; min-width: 0; max-width: 150rpx; height: 76rpx; line-height: 76rpx; padding: 0; margin: 0 0 0 12rpx; border-radius: 14rpx; background: var(--grad); color: #FFF; font-size: 26rpx; font-weight: 600; border: none; box-shadow: 0 6rpx 18rpx rgba(47, 178, 135, 0.3); text-align: center; }
+.btn-add-fav::after { border: none; }
 .fav-item { position: relative; display: inline-block; margin: 0 16rpx 16rpx 0; }
 .fav-x { display: inline-block; width: 40rpx; height: 40rpx; line-height: 40rpx; margin-left: 10rpx; text-align: center; border-radius: 50%; background: #FF7A70; color: #FFF; font-size: 24rpx; vertical-align: middle; }
 .btn-hover { opacity: 0.85; transform: scale(0.97); }

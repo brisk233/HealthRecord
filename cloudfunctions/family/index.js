@@ -17,7 +17,7 @@ async function myFamily(openid) {
 
 // 首次运行时自动创建集合（免手动建库）
 async function ensureCollections() {
-  const names = ['families', 'checkins'];
+  const names = ['families', 'checkins', 'suggestions'];
   for (const n of names) {
     try { await db.createCollection(n); } catch (e) { /* 已存在则忽略 */ }
   }
@@ -77,8 +77,15 @@ exports.main = async (event) => {
       fridge: (data && data.fridge) || fam.fridge || [],
       updatedAt: Date.now()
     };
-    if (data && 'menuOverride' in data) merged.menuOverride = data.menuOverride || {};
-    await col.doc(fam.code).update({ data: merged });
+    // 用 _.set 整体替换：档案/冰箱首次从 null 写入对象时，普通 update 会报
+    // "Cannot create field 'active' in element {profile: null}" 导致推送失败
+    const patch = {
+      profile: _.set(merged.profile),
+      fridge: _.set(merged.fridge),
+      updatedAt: Date.now()
+    };
+    if (data && 'menuOverride' in data) patch.menuOverride = _.set(data.menuOverride || {});
+    await col.doc(fam.code).update({ data: patch });
     return { ok: true };
   }
 
@@ -167,6 +174,52 @@ exports.main = async (event) => {
     });
     await col.doc(fam.code).update({ data: { members: members, updatedAt: Date.now() } });
     return { ok: true };
+  }
+
+  if (action === 'suggestAdd') {
+    const { text, images } = event;
+    const fam = await myFamily(OPENID);
+    const member = fam && fam.members.find(function (m) { return m.openid === OPENID; });
+    const content = String(text || '').trim().slice(0, 500);
+    const imgs = Array.isArray(images) ? images.filter(function (x) { return typeof x === 'string' && x; }).slice(0, 3) : [];
+    if (!content && !imgs.length) return { ok: false, err: '请填写建议或添加图片' };
+    await db.collection('suggestions').add({
+      data: {
+        openid: OPENID,
+        nickname: (member && member.nickname) || '我',
+        gender: (member && member.gender) || 'male',
+        text: content,
+        images: imgs,
+        code: fam ? fam.code : '',
+        createdAt: Date.now(),
+        status: 'new'
+      }
+    });
+    return { ok: true };
+  }
+
+  if (action === 'suggestList') {
+    const fam = await myFamily(OPENID);
+    const r = await db.collection('suggestions').orderBy('createdAt', 'desc').limit(100).get();
+    // 家庭模式只看本家庭建议；单人模式只看自己提交的建议
+    const mine = fam ? r.data.filter(function (s) { return s.code === fam.code; }) : r.data.filter(function (s) { return s.openid === OPENID; });
+    const list = await Promise.all(mine.map(async function (s) {
+      const imgs = s.images || [];
+      let images = imgs;
+      if (imgs.length) {
+        try {
+          const res = await cloud.getTempFileURL({ fileList: imgs });
+          const map = {};
+          (res.fileList || []).forEach(function (f) { map[f.fileID] = f.tempFileURL || f.fileID; });
+          images = imgs.map(function (id) { return map[id] || id; });
+        } catch (e) { /* 转链失败则保留原 fileID */ }
+      }
+      return {
+        id: s._id, nickname: s.nickname || '我', gender: s.gender || 'male',
+        text: s.text || '', images: images, createdAt: s.createdAt || 0, status: s.status || 'new'
+      };
+    }));
+    return { ok: true, data: list };
   }
 
   return { ok: false, err: '未知 action' };

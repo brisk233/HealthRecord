@@ -44,14 +44,10 @@
 
   <view class="card" wx:else>
     <view class="card-title" style="display:flex;align-items:center;justify-content:space-between;" bindtap="toggleFamily">
-      <text wx:if="{{!editingName}}">🏠 {{family.name || '我们的家'}}</text>
-      <input wx:else class="input" style="flex:1;margin:0;" placeholder="家庭名称（≤12字）" value="{{familyName}}" bindinput="onNameInput" maxlength="12"/>
+      <text wx:if="{{!editingName}}" class="family-name" catchtap="editName">🏠 {{family.name || '我们的家'}}</text>
+      <input wx:else class="input" style="flex:1;margin:0;" placeholder="家庭名称（≤12字）" value="{{familyName}}" bindinput="onNameInput" bindblur="saveName" bindconfirm="saveName" focus="{{true}}" maxlength="12"/>
       <view style="display:flex;align-items:center;">
-        <block wx:if="{{myRole === 'creator'}}">
-          <button wx:if="{{!editingName}}" class="btn-ghost btn-sm" hover-class="btn-hover" style="margin-top:0;" catchtap="stopProp" bindtap="editName">✏️</button>
-          <button wx:else class="btn-primary btn-sm" hover-class="btn-hover" style="margin-top:0;" catchtap="stopProp" bindtap="saveName">✓</button>
-        </block>
-        <view style="padding:12rpx 4rpx 12rpx 24rpx;" bindtap="toggleFamily"><text class="muted">{{familyOpen ? '收起 ▴' : '成员' + family.members.length + ' · ▾'}}</text></view>
+        <view style="padding:12rpx 4rpx 12rpx 16rpx;" catchtap="toggleFamily"><text class="muted">{{familyOpen ? '收起 ▴' : '成员' + family.members.length + ' · ▾'}}</text></view>
       </view>
     </view>
     <block wx:if="{{familyOpen}}">
@@ -132,7 +128,6 @@
       </view>
       <view class="list-note">添加自定义习惯：</view>
       <input class="input" placeholder="名称，如：练字" value="{{newHabit.name}}" bindinput="onNewHabitName"/>
-      <input class="input" placeholder="图标，如：✍️" value="{{newHabit.icon}}" bindinput="onNewHabitIcon"/>
       <picker range="{{freqs}}" value="{{freqIdx}}" bindchange="onFreq">
         <view class="input">频率：{{freqs[freqIdx]}}</view>
       </picker>
@@ -211,10 +206,16 @@
     <button class="btn-ghost btn-sm" hover-class="btn-hover" bindtap="clearFavs">🗑️ 清空已选食材</button>
     <view style="display:flex;margin-top:12rpx;">
       <input class="input" style="flex:1;margin:0;" placeholder="自定义添加食材，如：番茄" value="{{favNew}}" bindinput="onFavNew"/>
-      <button class="btn-primary btn-sm" style="margin:0 0 0 12rpx;flex-shrink:0;" hover-class="btn-hover" bindtap="addFav">➕</button>
+      <button class="btn-add-fav" hover-class="btn-hover" bindtap="addFav">➕ 添加</button>
     </view>
     <view class="list-note">修改即保存 · 清淡避开辣菜，偏辣多排辣菜</view>
     </block>
+  </view>
+
+  <view class="card">
+    <view class="card-title">💡 使用建议</view>
+    <view class="row" bindtap="goSuggest"><text>✍️ 提交建议</text><text class="muted" style="margin:0;">支持图片 ›</text></view>
+    <view class="row" bindtap="goSuggestions"><text>📋 查看建议</text><text class="muted" style="margin:0;">使用者反馈 ›</text></view>
   </view>
 
   <view class="card">
@@ -226,7 +227,7 @@
     <view wx:if="{{remindEnabled}}" class="list-note">微信订阅消息为一次性：开启时务必勾选「总是保持以上选择」才会每天自动续订；若某天没收到说明额度已用完，点下方重新授权即可</view>
     <button wx:if="{{remindEnabled}}" class="btn-ghost btn-sm" hover-class="btn-hover" bindtap="openRemind">重新授权</button>
     <block wx:else>
-      <button class="btn-ghost" hover-class="btn-hover" bindtap="openRemind">🔔 开启每日提醒</button>
+      <button class="btn-ghost" style="min-width:0;padding:14rpx 32rpx;" hover-class="btn-hover" bindtap="openRemind">🔔 开启每日提醒</button>
       <view class="list-note">授权时勾选「总是保持以上选择」才能每天收到</view>
     </block>
   </view>

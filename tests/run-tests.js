@@ -12,9 +12,9 @@ const lifestyle = require(mp('data/lifestyle.js'));
 const cloudsync = require(mp('utils/cloudsync.js'));
 
 let pass = 0, fail = 0;
+const testQueue = [];
 function t(name, fn) {
-  try { fn(); pass++; console.log('  ✓ ' + name); }
-  catch (e) { fail++; console.log('  ✗ ' + name + ' -> ' + e.message); }
+  testQueue.push({ name: name, fn: fn });
 }
 function eq(a, b, msg) { if (a !== b) throw new Error((msg || '') + ' 期望 ' + b + ' 实际 ' + a); }
 
@@ -138,6 +138,7 @@ console.log('== profile/today/fitness 行为自测（mock wx 模拟点击） =='
 let mockStorage = {};
 function installMocks(profile) {
   mockStorage = {};
+  global.__mockApp = { globalData: { profile: profile, fridge: [], version: '2.1.9' }, resetLocal: function () {} };
   global.wx = {
     getStorageSync: function (k) { return mockStorage[k]; },
     setStorageSync: function (k, v) { mockStorage[k] = v; },
@@ -145,12 +146,11 @@ function installMocks(profile) {
     clearStorageSync: function () { mockStorage = {}; },
     cloud: { callFunction: function () { return Promise.resolve({ result: null }); }, init: function () {} },
     showToast: function () {}, showModal: function () {}, showActionSheet: function () {},
+    showLoading: function () {}, hideLoading: function () {},
     vibrateShort: function () {}, requestSubscribeMessage: function () {},
     setClipboardData: function () {}, navigateTo: function () {}, navigateBack: function () {}, switchTab: function () {}
   };
-  global.getApp = function () {
-    return { globalData: { profile: profile, fridge: [], version: '2.1.9' }, resetLocal: function () {} };
-  };
+  global.getApp = function () { return global.__mockApp; };
 }
 function setPath(obj, pathStr, val) {
   const parts = pathStr.split('.');
@@ -164,7 +164,7 @@ function makePage(cfg, methods) {
   page.setData = function (patch) {
     Object.keys(patch).forEach(function (k) { setPath(this.data, k, patch[k]); }.bind(this));
   };
-  (methods || ['refresh', 'buildFavAll', 'saveProfile', 'onModuleToggle', 'onFavToggle', 'onFavDel', 'clearFavs', 'addFav', 'moduleName']).forEach(function (m) {
+  (methods || ['refresh', 'buildFavAll', 'saveProfile', 'onModuleToggle', 'onFavToggle', 'onFavDel', 'clearFavs', 'addFav', 'addHabit', 'autoHabitIcon', 'moduleName', 'copyCode']).forEach(function (m) {
     page[m] = cfg[m].bind(page);
   });
   return page;
@@ -249,6 +249,262 @@ t('食材 chip：点已选=删除并隐藏；点灰色=添加；删除项只能�
   if (!restored || !restored.on) throw new Error('加回后 chip 未恢复选中');
 });
 
+t('复制邀请码：经隐私弹窗授权后写入剪贴板', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/profile/profile.js');
+  const page = makePage(getCfg());
+  let copied = '';
+  page.selectComponent = function () {
+    return { ensure: function (cb) { cb(); } };
+  };
+  global.wx.setClipboardData = function (opt) { copied = opt.data; if (opt.success) opt.success(); };
+  page.setData({ family: { code: 'ABC123' } });
+  page.copyCode();
+  if (copied !== 'ABC123') throw new Error('剪贴板未写入邀请码');
+});
+
+t('自定义习惯：不填图标，自动按名称生成', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/profile/profile.js');
+  const page = makePage(getCfg());
+  page.setData({ newHabit: { name: '每天喝水', icon: '' } });
+  page.addHabit();
+  const h1 = profile.male.habits[profile.male.habits.length - 1];
+  if (h1.icon !== '💧') throw new Error('喝水习惯未自动生成水滴图标: ' + h1.icon);
+  page.setData({ newHabit: { name: '练字', icon: '' } });
+  page.addHabit();
+  const h2 = profile.male.habits[profile.male.habits.length - 1];
+  if (h2.icon !== '✍️') throw new Error('练字习惯未自动生成笔图标');
+  page.setData({ newHabit: { name: '奇怪习惯', icon: '' } });
+  page.addHabit();
+  const h3 = profile.male.habits[profile.male.habits.length - 1];
+  if (h3.icon !== '⭐') throw new Error('未知习惯未使用默认图标');
+  const stored = mockStorage.profile;
+  if (!stored || stored.male.habits.length !== profile.male.habits.length) throw new Error('自定义习惯未持久化');
+});
+
+t('建议提交：纯文字+图片，先上传再调 suggestAdd', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  mockStorage.myOpenid = 'o1';
+  const calls = [];
+  global.wx.cloud.callFunction = function (opt) {
+    calls.push(opt);
+    if (opt.name === 'family' && opt.data.action === 'suggestAdd') return Promise.resolve({ result: { ok: true } });
+    return Promise.resolve({ result: {} });
+  };
+  global.wx.cloud.uploadFile = function (opt) { if (opt.success) opt.success({ fileID: 'cloud://sug/' + opt.cloudPath }); };
+  global.wx.chooseMedia = function (opt) { if (opt.success) opt.success({ tempFiles: [{ tempFilePath: 'tmp1.jpg' }, { tempFilePath: 'tmp2.jpg' }] }); };
+  const getCfg = capturePage();
+  loadPage('pages/suggest/suggest.js');
+  const page = makePage(getCfg(), ['onText', 'pickImage', 'removeImage', 'previewImage', 'submit']);
+  page.selectComponent = function () { return { ensure: function (cb) { cb(); } }; };
+  page.setData({ text: '希望增加夜间模式' });
+  page.pickImage();
+  if (page.data.images.length !== 2) throw new Error('选图后 images 应为 2');
+  page.submit();
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        const adds = calls.filter(function (c) { return c.name === 'family' && c.data.action === 'suggestAdd'; });
+        if (!adds.length) throw new Error('未调用 suggestAdd');
+        const last = adds[adds.length - 1].data;
+        if (last.text !== '希望增加夜间模式') throw new Error('建议文本未提交');
+        if (last.images.length !== 2) throw new Error('图片未上传提交: ' + last.images.length);
+        if (last.images[0].indexOf('cloud://sug/') !== 0) throw new Error('图片 fileID 不正确');
+        res();
+      } catch (e) { rej(e); }
+    }, 30);
+  });
+});
+
+t('建议提交：空内容拦截、删除图片生效', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const calls = [];
+  global.wx.cloud.callFunction = function (opt) { calls.push(opt); return Promise.resolve({ result: {} }); };
+  global.wx.chooseMedia = function (opt) { if (opt.success) opt.success({ tempFiles: [{ tempFilePath: 'tmp1.jpg' }, { tempFilePath: 'tmp2.jpg' }] }); };
+  const getCfg = capturePage();
+  loadPage('pages/suggest/suggest.js');
+  const page = makePage(getCfg(), ['onText', 'pickImage', 'removeImage', 'previewImage', 'submit']);
+  page.selectComponent = function () { return { ensure: function (cb) { cb(); } }; };
+  page.submit();
+  if (calls.some(function (c) { return c.name === 'family' && c.data.action === 'suggestAdd'; })) throw new Error('空内容不应提交');
+  page.pickImage();
+  page.removeImage({ currentTarget: { dataset: { idx: 1 } } });
+  if (page.data.images.length !== 1) throw new Error('删除图片后应为 1 张');
+});
+
+t('查看建议：拉取列表并格式化时间', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  global.wx.cloud.callFunction = function (opt) {
+    if (opt.name === 'family' && opt.data.action === 'suggestList') {
+      return Promise.resolve({ result: { ok: true, data: [{ id: 's1', nickname: '李爹', gender: 'male', text: '好用', images: [], createdAt: 1787643416847, status: 'new' }] } });
+    }
+    return Promise.resolve({ result: {} });
+  };
+  const getCfg = capturePage();
+  loadPage('pages/suggestions/suggestions.js');
+  const page = makePage(getCfg(), ['onShow', 'previewImage']);
+  page.onShow();
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        if (page.data.list.length !== 1) throw new Error('建议列表未加载');
+        if (page.data.list[0].text !== '好用') throw new Error('建议内容错误');
+        if (!page.data.list[0].dateText) throw new Error('时间未格式化');
+        res();
+      } catch (e) { rej(e); }
+    }, 30);
+  });
+});
+
+t('我的页含提交/查看建议入口，页面已注册', function () {
+  const fs = require('fs');
+  const wxml = fs.readFileSync(mp('pages/profile/profile.wxml'), 'utf8');
+  const appJson = JSON.parse(fs.readFileSync(mp('app.json'), 'utf8'));
+  if (wxml.indexOf('提交建议') === -1 || wxml.indexOf('查看建议') === -1) throw new Error('我的页缺少建议入口');
+  if (appJson.pages.indexOf('pages/suggest/suggest') === -1) throw new Error('suggest 页面未注册');
+  if (appJson.pages.indexOf('pages/suggestions/suggestions') === -1) throw new Error('suggestions 页面未注册');
+});
+
+t('云端合并不丢 trainOrder（健身课表排序持久化）', function () {
+  const local = JSON.parse(JSON.stringify(seed.defaultProfile));
+  local.trainOrder = { male: [6, 5, 4, 3, 2, 1, 0] };
+  const remote = JSON.parse(JSON.stringify(seed.defaultProfile));
+  remote.trainOrder = { male: [6, 5, 4, 3, 2, 1, 0] };
+  remote.male._t = 1000;
+  const merged = cloudsync.mergeProfile(local, remote);
+  if (!merged.trainOrder || merged.trainOrder.male[0] !== 6) throw new Error('trainOrder 被合并逻辑丢弃');
+});
+
+t('今日三餐打卡：选择后写入 meals 存储', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  global.wx.showActionSheet = function (opt) { if (opt.success) opt.success({ tapIndex: 0 }); };
+  const getCfg = capturePage();
+  loadPage('pages/today/today.js');
+  const page = makePage(getCfg(), ['refresh', 'tapMeal', 'toggleSupp', 'toggleHabit']);
+  page.refresh();
+  page.tapMeal({ currentTarget: { dataset: { k: 'd' } } });
+  const key = 'meals-male-' + require(mp('utils/date.js')).todayStr();
+  if (!mockStorage[key] || mockStorage[key].d !== 'menu') throw new Error('晚餐打卡未写入');
+  page.toggleSupp({ currentTarget: { dataset: { key: 'fishOil' } }, detail: { value: true } });
+  const supKey = 'supps-male-' + require(mp('utils/date.js')).todayStr();
+  if (!mockStorage[supKey] || !mockStorage[supKey].fishOil) throw new Error('补剂打卡未写入');
+  page.toggleHabit({ currentTarget: { dataset: { key: 'h1' } } });
+  const habitKey = 'habit-male-' + require(mp('utils/date.js')).todayStr();
+  if (!mockStorage[habitKey] || !mockStorage[habitKey].h1) throw new Error('习惯打卡未写入');
+});
+
+t('健身：训练打卡/取消、自定义运动/取消', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/fitness/fitness.js');
+  const page = makePage(getCfg(), ['refresh', 'checkin', 'checkinCustom', 'cancelCustom', 'persistOrder', 'resetOrder']);
+  page.refresh();
+  const today = require(mp('utils/date.js')).todayStr();
+  page.checkin();
+  if (!mockStorage['train-male-' + today]) throw new Error('训练打卡未写入');
+  page.checkin();
+  if (mockStorage['train-male-' + today]) throw new Error('训练取消未生效');
+  page.setData({ customType: '篮球', customMinutes: 60 });
+  page.checkinCustom();
+  if (!mockStorage['custom-male-' + today] || mockStorage['custom-male-' + today].type !== '篮球') throw new Error('自定义运动未写入');
+  page.cancelCustom();
+  if (mockStorage['custom-male-' + today]) throw new Error('取消自定义运动未生效');
+  page.setData({ order: [1, 0, 2, 3, 4, 5, 6] });
+  page.persistOrder();
+  if (!profile.trainOrder || !profile.trainOrder.male || profile.trainOrder.male[0] !== 1) throw new Error('课表顺序未持久化');
+  page.resetOrder();
+  if (profile.trainOrder.male[0] !== 0) throw new Error('恢复默认课表未生效');
+});
+
+t('菜单：采购/备菜勾选、重新生成、恢复默认', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/meals/meals.js');
+  const page = makePage(getCfg(), ['refresh', 'regen', 'resetMenu', 'toggleAllBuy', 'toggleAllSteps', 'toggleBuy', 'toggleStep', 'persistMenu']);
+  page.refresh();
+  if (!page.data.purchase.length) throw new Error('采购清单为空');
+  page.toggleBuy({ currentTarget: { dataset: { idx: 0 } } });
+  if (!page.data.purchase[0].done) throw new Error('采购单项勾选未生效');
+  page.toggleAllBuy();
+  if (!page.data.purchase.every(function (x) { return x.done; })) throw new Error('采购一键全选未生效');
+  page.toggleStep({ currentTarget: { dataset: { idx: 0 } } });
+  page.toggleAllSteps();
+  if (!page.data.steps.every(function (x) { return x.done; })) throw new Error('备菜一键全选未生效');
+  mockStorage.menuOverride = { '2099-01-01': { dinner: 'x' } };
+  page.regen();
+  if (mockStorage.menuOverride) throw new Error('重新生成未清除 menuOverride');
+  page.persistMenu();
+  if (!mockStorage.menuOverride) throw new Error('拖拽持久化未写入 menuOverride');
+  page.resetMenu();
+  if (mockStorage.menuOverride) throw new Error('恢复默认未清除 menuOverride');
+});
+
+t('冰箱：入库校验、入库、吃掉了', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/fridge/fridge.js');
+  const page = makePage(getCfg(), ['onLoad', 'refresh', 'addItem', 'eatItem']);
+  page.onLoad();
+  page.refresh();
+  const app = global.getApp();
+  page.setData({ form: { name: '', catIdx: 0, box: '' } });
+  page.addItem();
+  if (app.globalData.fridge.length !== 0) throw new Error('空名称不应入库');
+  page.setData({ form: { name: '番茄', catIdx: 1, box: '冷藏' } });
+  page.addItem();
+  if (app.globalData.fridge.length !== 1) throw new Error('入库失败');
+  page.eatItem({ currentTarget: { dataset: { id: app.globalData.fridge[0].id } } });
+  if (app.globalData.fridge.length !== 0) throw new Error('吃掉了未生效');
+});
+
+t('跨页：冰箱本地改动后，菜单页拉取不复活已吃食材', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  mockStorage.familyCode = 'T3JK6D';
+  global.wx.cloud.callFunction = function (opt) {
+    if (opt.name === 'family' && opt.data.action === 'push') return new Promise(function () {}); // 推送保持未确认
+    return Promise.resolve({ result: null });
+  };
+  const cloudsyncMod = require(mp('utils/cloudsync.js'));
+  const oldPull = cloudsyncMod.pullHome;
+  let resolvePull;
+  cloudsyncMod.pullHome = function () { return new Promise(function (res) { resolvePull = res; }); };
+  const app = global.getApp();
+  const oldFridge = [{ id: 'f1', name: '过期食材', cat: 'leaf', box: 'x', purchased: '2026-01-01', note: '' }];
+  app.globalData.fridge = oldFridge.slice();
+  const getCfg = capturePage();
+  loadPage('pages/fridge/fridge.js');
+  const fpage = makePage(getCfg(), ['refresh', 'eatItem']);
+  fpage.refresh();
+  fpage.eatItem({ currentTarget: { dataset: { id: 'f1' } } });
+  if (app.globalData.fridge.length !== 0) throw new Error('冰箱页吃掉未生效');
+  loadPage('pages/meals/meals.js');
+  const mpage = makePage(getCfg(), ['onShow', 'refresh']);
+  mpage.onShow();
+  resolvePull({ fridge: oldFridge.slice(), profile: null });
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        cloudsyncMod.pullHome = oldPull;
+        if (app.globalData.fridge.length !== 0) throw new Error('菜单页拉取把已吃食材复活');
+        res();
+      } catch (e) { cloudsyncMod.pullHome = oldPull; rej(e); }
+    }, 20);
+  });
+});
+
 t('云端空 favHidden 不抹本地已删除记录（mergeProfile 守卫）', function () {
   const local = JSON.parse(JSON.stringify(seed.defaultProfile));
   local.male.favHidden = ['吊龙'];
@@ -258,6 +514,156 @@ t('云端空 favHidden 不抹本地已删除记录（mergeProfile 守卫）', fu
   remote.male._t = 3000;
   const merged = cloudsync.mergeProfile(local, remote);
   if (merged.male.favHidden.indexOf('吊龙') === -1) throw new Error('云端空 favHidden 覆盖了本地删除记录');
+});
+
+t('云端空 tags/subTags 不抹本地已选生活方式（mergeProfile 守卫）', function () {
+  const local = JSON.parse(JSON.stringify(seed.defaultProfile));
+  local.male.tags = ['💪 运动型'];
+  local.male.subTags = ['健身'];
+  local.male._t = 2000;
+  const remote = JSON.parse(JSON.stringify(seed.defaultProfile));
+  remote.male.tags = [];
+  remote.male.subTags = [];
+  remote.male._t = 3000;
+  const merged = cloudsync.mergeProfile(local, remote);
+  if (!merged.male.tags.some(function (t) { return t.indexOf('运动型') !== -1; })) throw new Error('云端空 tags 覆盖了本地标签');
+  if (merged.male.subTags.indexOf('健身') === -1) throw new Error('云端空 subTags 覆盖了本地细分');
+});
+
+t('退出登录后重登：默认档案合并云端恢复生活方式（云端无 _t 也恢复）', function () {
+  const local = JSON.parse(JSON.stringify(seed.defaultProfile)); // 无 _t、数组全空 = 退出后的本机状态
+  const remote = JSON.parse(JSON.stringify(seed.defaultProfile));
+  remote.male.tags = ['💪 运动型'];
+  remote.male.subTags = ['健身'];
+  remote.male.habits = [{ key: 'h1', name: '健身30分钟', icon: '🏋️', freq: '每天' }];
+  remote.male.modules = ['meals', 'supps'];
+  remote.male.favs = ['鲈鱼'];
+  remote.male.favHidden = ['牛腩'];
+  // 注意：remote 不设置 _t —— 模拟旧云端没有时间戳
+  const merged = cloudsync.mergeProfile(local, remote);
+  if (!merged.male.tags.some(function (t) { return t.indexOf('运动型') !== -1; })) throw new Error('重登后 tags 未恢复');
+  if (!merged.male.subTags.length) throw new Error('重登后 subTags 未恢复');
+  if (!merged.male.habits.length) throw new Error('重登后 habits 未恢复');
+  if (merged.male.modules.indexOf('supps') === -1) throw new Error('重登后 modules 未恢复');
+  if (merged.male.favs.indexOf('鲈鱼') === -1) throw new Error('重登后 favs 未恢复');
+  if (merged.male.favHidden.indexOf('牛腩') === -1) throw new Error('重登后 favHidden 未恢复');
+});
+
+t('本地已保存(有 _t)且数组为空时，云端旧数据不得覆盖', function () {
+  const local = JSON.parse(JSON.stringify(seed.defaultProfile));
+  local.male.tags = [];
+  local.male.habits = [];
+  local.male.favs = [];
+  local.male._t = 2000;
+  const remote = JSON.parse(JSON.stringify(seed.defaultProfile));
+  remote.male.tags = ['💪 运动型'];
+  remote.male.habits = [{ key: 'h1', name: 'x', icon: '🏋️', freq: '每天' }];
+  remote.male.favs = ['鲈鱼'];
+  remote.male._t = 1000; // 云端更旧
+  const merged = cloudsync.mergeProfile(local, remote);
+  if (merged.male.tags.length !== 0) throw new Error('本地已保存的空 tags 被云端覆盖');
+  if (merged.male.habits.length !== 0) throw new Error('本地已保存的空 habits 被云端覆盖');
+  if (merged.male.favs.length !== 0) throw new Error('本地已保存的空 favs 被云端覆盖');
+});
+
+t('退出登录→重新登录：生活方式从云端恢复（端到端页面流程）', function () {
+  const remoteProfile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  remoteProfile.male.tags = ['💪 运动型'];
+  remoteProfile.male.subTags = ['健身'];
+  remoteProfile.male.habits = [{ key: 'h1', name: '健身30分钟', icon: '🏋️', freq: '每天' }];
+  remoteProfile.male.modules = ['meals', 'supps'];
+  // 不设 _t：模拟旧云端
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  mockStorage.myOpenid = 'o1';
+  mockStorage.familyCode = 'T3JK6D';
+  mockStorage.myGender = 'male';
+  global.wx.showModal = function (opt) { if (opt.success) opt.success({ confirm: true }); };
+  global.wx.cloud.callFunction = function (opt) {
+    if (opt.name === 'login') return Promise.resolve({ result: { openid: 'o1' } });
+    if (opt.name === 'family') {
+      if (opt.data.action === 'info') return Promise.resolve({ result: { ok: true, data: { code: 'T3JK6D', myGender: 'male', members: [], name: '家' } } });
+      if (opt.data.action === 'pull') return Promise.resolve({ result: { ok: true, data: { profile: remoteProfile, fridge: [] } } });
+      if (opt.data.action === 'push') return Promise.resolve({ result: { ok: true } });
+    }
+    return Promise.resolve({ result: {} });
+  };
+  const getCfg = capturePage();
+  loadPage('pages/profile/profile.js');
+  const page = makePage(getCfg());
+  page.selectComponent = function () { return { ensure: function (cb) { cb(); } }; };
+  page.logout();
+  const app = global.getApp();
+  if (app.globalData.profile.male.tags.length !== 0) throw new Error('退出后本机应清空生活方式');
+  page.doLogin();
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        if (!app.globalData.profile.male.tags.some(function (t) { return t.indexOf('运动型') !== -1; })) throw new Error('重登后生活方式未恢复');
+        const stored = mockStorage.profile;
+        if (!stored || !stored.male.tags.some(function (t) { return t.indexOf('运动型') !== -1; })) throw new Error('重登后未写回存储');
+        res();
+      } catch (e) { rej(e); }
+    }, 50);
+  });
+});
+
+t('生活方式：完成引导后 tags/subTags/habits/modules 持久化且再次进入回显', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  mockStorage.myGender = 'male';
+  const getCfg = capturePage();
+  loadPage('pages/onboarding/onboarding.js');
+  const page = makePage(getCfg(), ['onLoad', 'toggleMajor', 'toggleSub', 'finish']);
+  page.onLoad();
+  page.toggleMajor({ currentTarget: { dataset: { k: 'sport' } } });
+  page.toggleMajor({ currentTarget: { dataset: { k: 'health' } } });
+  page.toggleSub({ currentTarget: { dataset: { v: '健身' } } });
+  page.finish();
+  const stored = mockStorage.profile;
+  if (!stored.male.tags.length) throw new Error('tags 未持久化');
+  if (stored.male.tags[0].indexOf('运动型') === -1) throw new Error('tags 内容错误');
+  if (!stored.male.subTags.length) throw new Error('subTags 未持久化');
+  if (!stored.male.habits.length) throw new Error('habits 未持久化');
+  if (stored.male.modules.indexOf('fitness') === -1) throw new Error('运动型应默认开启健身');
+  if (!stored.male._t) throw new Error('_t 未写入');
+  const page2 = makePage(getCfg(), ['onLoad']);
+  page2.onLoad();
+  if (!page2.data.selected.sport || !page2.data.selected.health) throw new Error('onLoad 未回显已存标签');
+});
+
+t('冰箱：拉取期间的本地「吃掉」不被云端旧数据覆盖', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  mockStorage.familyCode = 'T3JK6D';
+  global.wx.cloud.callFunction = function (opt) {
+    if (opt.name === 'family' && opt.data.action === 'push') return new Promise(function () {}); // 推送保持未确认
+    return Promise.resolve({ result: null });
+  };
+  const cloudsyncMod = require(mp('utils/cloudsync.js'));
+  const oldPull = cloudsyncMod.pullHome;
+  let resolvePull;
+  cloudsyncMod.pullHome = function () { return new Promise(function (res) { resolvePull = res; }); };
+  const app = global.getApp();
+  const oldFridge = [{ id: 'f1', name: '过期食材', cat: 'leaf', box: 'x', purchased: '2026-01-01', note: '' }];
+  app.globalData.fridge = oldFridge.slice();
+  const getCfg = capturePage();
+  loadPage('pages/fridge/fridge.js');
+  const page = makePage(getCfg(), ['refresh', 'pullCloud', 'eatItem']);
+  page.refresh();
+  page.pullCloud(function () {});
+  page.eatItem({ currentTarget: { dataset: { id: 'f1' } } });
+  if (app.globalData.fridge.length !== 0) throw new Error('吃掉后本地未移除');
+  resolvePull({ fridge: oldFridge.slice() });
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        cloudsyncMod.pullHome = oldPull;
+        if (app.globalData.fridge.length !== 0) throw new Error('云端旧数据把已吃掉的食材复活了');
+        res();
+      } catch (e) { cloudsyncMod.pullHome = oldPull; rej(e); }
+    }, 20);
+  });
 });
 
 t('今日页模块显隐标志：按 modules 计算且空数组保持隐藏', function () {
@@ -308,5 +714,18 @@ t('WXML 扫描：全量模板禁止 indexOf 方法调用', function () {
 });
 
 console.log('');
-console.log('结果: ' + pass + ' 通过, ' + fail + ' 失败');
-process.exit(fail > 0 ? 1 : 0);
+(async function runAll() {
+  for (let i = 0; i < testQueue.length; i++) {
+    const item = testQueue[i];
+    try {
+      const r = item.fn();
+      if (r && typeof r.then === 'function') await r;
+      pass++; console.log('  ✓ ' + item.name);
+    } catch (e) {
+      fail++; console.log('  ✗ ' + item.name + ' -> ' + e.message);
+    }
+  }
+  console.log('');
+  console.log('结果: ' + pass + ' 通过, ' + fail + ' 失败');
+  process.exit(fail > 0 ? 1 : 0);
+})();
