@@ -5,11 +5,11 @@ const cloudsync = require('../../utils/cloudsync.js');
 function buzz() { try { wx.vibrateShort({ type: 'light' }); } catch (e) {} }
 
 Page({
-  data: { missing: [], purchase: [], steps: [], buyDone: 0, stepDone: 0, buyPct: 0, stepPct: 0 },
+  data: { missing: [], purchase: [], steps: [], buyDone: 0, stepDone: 0, buyPct: 0, stepPct: 0, allBought: false, allSteps: false },
   onShow() { this.refresh(); },
   refresh() {
     const person = app.globalData.profile[cloudsync.myGender()];
-    const days = mealplan.generateWeekMenu(app.globalData.fridge, { tasteLevel: person.tasteLevel || '微辣', favs: person.favs || [] });
+    const days = mealplan.generateWeekMenu(app.globalData.fridge, { tasteLevel: person.tasteLevel || '微辣', favs: person.favs || [], tags: person.tags || [] });
     const missMap = {};
     days.forEach(function (d) { (d.missing || []).forEach(function (m) { missMap[m] = 1; }); });
     const buyKey = 'purchase-done';
@@ -28,9 +28,29 @@ Page({
       missing: Object.keys(missMap),
       purchase: purchase, steps: steps,
       buyDone: buyDone, stepDone: stepDone,
+      allBought: purchase.length > 0 && buyDone === purchase.length,
+      allSteps: steps.length > 0 && stepDone === steps.length,
       buyPct: Math.round(buyDone / purchase.length * 100),
       stepPct: Math.round(stepDone / steps.length * 100)
     });
+  },
+  toggleAllBuy() {
+    const key = 'purchase-done';
+    const saved = {};
+    if (!this.data.allBought) {
+      this.data.purchase.forEach(function (x, i) { saved[i] = true; });
+    }
+    wx.setStorageSync(key, saved);
+    this.refresh();
+  },
+  toggleAllSteps() {
+    const key = 'prep-done';
+    const saved = {};
+    if (!this.data.allSteps) {
+      this.data.steps.forEach(function (x, i) { saved[i] = true; });
+    }
+    wx.setStorageSync(key, saved);
+    this.refresh();
   },
   toggleBuy(e) {
     const idx = e.currentTarget.dataset.idx;

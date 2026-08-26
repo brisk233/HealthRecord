@@ -7,22 +7,30 @@
   <view class="card" wx:if="{{items.length === 0}}">
     <view class="empty"><text class="emoji">🧊</text>冰箱空空如也<view class="muted">备完菜记得入库哦</view></view>
   </view>
-  <view class="card" wx:for="{{items}}" wx:key="id">
-    <view class="row">
+  <view class="card {{item.status.cls === 'danger' ? 'card-danger' : (item.status.cls === 'warn' ? 'card-warn' : '')}}" wx:for="{{items}}" wx:key="id">
+    <view class="row" bindtap="startEdit" data-id="{{item.id}}" hover-class="row-hover">
       <view style="display:flex;align-items:center;"><view class="dot {{item.status.cls}}"></view><text style="font-weight:600;">{{item.name}}</text></view>
       <text class="tag {{item.status.cls}}">{{item.status.text}}</text>
     </view>
     <view class="muted">{{item.catLabel}} · {{item.box}} · 入库 {{item.purchased}} · 建议 {{item.suggested}} 前（剩 {{item.daysLeft}} 天）</view>
     <view class="muted" wx:if="{{item.note}}">{{item.note}}</view>
-    <button class="btn-ghost btn-sm" hover-class="btn-hover" data-id="{{item.id}}" bindtap="eatItem">吃掉了</button>
+    <view style="display:flex;justify-content:flex-end;margin-top:4rpx;">
+      <button class="btn-danger btn-sm" hover-class="btn-hover" data-id="{{item.id}}" catchtap="eatItem">🍽️ 吃掉了</button>
+    </view>
   </view>
   <view class="card">
-    <view class="card-title">➕ 食材入库</view>
-    <input class="input" placeholder="食材名称，如：吊龙" value="{{form.name}}" bindinput="onName"/>
+    <view class="card-title">{{editingId ? '✏️ 编辑食材' : '➕ 食材入库'}}</view>
+    <view class="input tp-input" bindtap="openTree" hover-class="row-hover" style="display:flex;align-items:center;justify-content:center;"><text>{{form.name ? '✅ ' + form.name : '👆 点击选择食材（树状分类）'}}</text><text class="tp-input-arrow"> ›</text></view>
+    <input class="input" placeholder="或手输食材名称（支持任意名称）" value="{{form.name}}" bindinput="onName" focus="{{!!editingId}}"/>
+    <view class="auto-hint" wx:if="{{autoHint}}">
+      <text>🤖 自动分析：{{autoHint}}</text>
+    </view>
+    <tree-picker id="tp" bind:select="onTreeSelect" />
     <picker range="{{cats}}" value="{{form.catIdx}}" bindchange="onCat">
-      <view class="input">分类：{{cats[form.catIdx]}}（保质期 {{catsDays[form.catIdx]}} 天）</view>
+      <view class="input">🧭 分类：{{cats[form.catIdx]}}（保质期 {{catsDays[form.catIdx]}} 天）</view>
     </picker>
-    <input class="input" placeholder="存放位置，如：冷藏盒②" value="{{form.box}}" bindinput="onBox"/>
-    <button class="btn-primary" hover-class="btn-hover" bindtap="addItem">📦 入库</button>
+    <input class="input" placeholder="📍 存放位置，如：冷藏盒①" value="{{form.box}}" bindinput="onBox"/>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="addItem">{{editingId ? '💾 保存修改' : '📦 入库'}}</button>
+    <button wx:if="{{editingId}}" class="btn-ghost btn-sm" hover-class="btn-hover" style="display:block;margin:16rpx auto 0;" bindtap="cancelEdit">取消编辑</button>
   </view>
 </view>

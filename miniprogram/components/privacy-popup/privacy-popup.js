@@ -26,10 +26,11 @@ Component({
         done();
       }
     },
+    // V1：拒绝 → 只关闭弹窗不退出，功能受限但可继续使用
     onRefuse() {
       this._cb = null;
       this.setData({ show: false });
-      wx.exitMiniProgram({ success: () => {} });
+      wx.showToast({ title: '已拒绝授权，部分功能将受限', icon: 'none', duration: 2000 });
     }
   }
 });

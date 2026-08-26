@@ -5,7 +5,10 @@
   <view class="card" wx:for="{{list}}" wx:key="id">
     <view class="row">
       <text style="font-weight:600;">{{item.gender === 'female' ? '她' : '他'}} · {{item.nickname}}</text>
-      <text class="muted" style="margin:0;">{{item.dateText}}</text>
+      <view style="display:flex;align-items:center;">
+        <text class="muted" style="margin:0 12rpx 0 0;">{{item.dateText}}</text>
+        <view class="btn-x" hover-class="btn-hover" data-id="{{item.id}}" catchtap="deleteItem">🗑</view>
+      </view>
     </view>
     <view class="suggest-text-view" wx:if="{{item.text}}">{{item.text}}</view>
     <view class="img-grid">

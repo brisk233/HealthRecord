@@ -1,0 +1,39 @@
+<view class="tp-mask" wx:if="{{show}}" bindtap="onMask">
+  <view class="tp-body" catchtap="noop">
+    <view class="tp-head">
+      <text class="tp-title">{{title}}</text>
+      <text class="tp-close" bindtap="onClose">✕</text>
+    </view>
+
+    <!-- 大类横向 tab（展开式：切 tab 即显示该大类全部子类+食材） -->
+    <scroll-view scroll-x class="tp-tabs" enhanced show-scrollbar="{{false}}">
+      <view class="tp-tabs-inner">
+        <view class="tp-tab {{activeL1 === index ? 'on' : ''}}" wx:for="{{tree}}" wx:key="key" bindtap="setL1" data-i="{{index}}">{{item.name}}</view>
+      </view>
+    </scroll-view>
+
+    <!-- 子类分组 + 食材平铺（当前大类，全展开、可多选） -->
+    <scroll-view scroll-y class="tp-list">
+      <view wx:for="{{curL1.children}}" wx:key="key" wx:for-item="g">
+        <view class="tp-group">{{g.name}}</view>
+        <view class="tp-items">
+          <view class="tp-leaf {{it.checked ? 'on' : ''}}" wx:for="{{g.items}}" wx:key="name" wx:for-item="it" bindtap="toggleLeaf" data-pos="{{g.name}}|{{index}}">
+            {{it.name}}<text wx:if="{{it.checked}}" class="tp-leaf-check">✓</text>
+          </view>
+        </view>
+      </view>
+      <view style="height:16rpx;"></view>
+    </scroll-view>
+
+    <!-- 底部：已选食材（可单个移除）+ 确认按钮 -->
+    <view class="tp-foot">
+      <view class="tp-foot-info">
+        <view wx:if="{{chosen.length === 0}}" class="tp-foot-empty">未选择食材</view>
+        <view wx:else class="tp-chosen">
+          <text class="tp-chosen-tag" wx:for="{{chosen}}" wx:key="*this">{{item}}<text class="tp-chosen-x" catchtap="removeChosen" data-v="{{item}}">✕</text></text>
+        </view>
+      </view>
+      <button class="tp-done" hover-class="btn-hover" bindtap="confirm" disabled="{{chosen.length === 0}}">{{mode === 'single' ? '✅ 确认' : '✅ 确认添加（' + chosen.length + '）'}}</button>
+    </view>
+  </view>
+</view>

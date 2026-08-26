@@ -17,9 +17,13 @@ function greet() {
 }
 
 Page({
-  data: { dateText: '', greet: '', profile: {}, person: {}, menu: {}, expiring: [], supps: [], suppDone: 0, train: {}, familyJoined: false, fridgeEmpty: false, meals: {}, mealDone: 0, mealLabels: { menu: '按菜单吃', home: '在家做', takeout: '外卖', party: '聚餐', out: '外食', skip: '没吃' }, habits: [], habitDone: 0, modules: ['meals', 'fitness', 'supps'] },
+  data: { dateText: '', greet: '', profile: {}, person: {}, menu: {}, expiring: [], supps: [], suppDone: 0, train: {}, familyJoined: false, fridgeEmpty: false, meals: {}, mealDone: 0, mealLabels: { menu: '按菜单吃', home: '在家做', canteen: '食堂', takeout: '外卖', party: '聚餐', out: '外食', skip: '没吃' }, habits: [], habitDone: 0, modules: ['meals', 'fitness', 'supps'], showGuide: false, mealSheet: { show: false, k: '', list: [] } },
   onShow() {
     this.refresh();
+    // 首次进入：未选过生活方式且未跳过 → 顶部提示条引导（不再强制跳转打断用户）
+    const person0 = app.globalData.profile[cloudsync.myGender()];
+    const showGuide = (!person0.tags || person0.tags.length === 0) && !wx.getStorageSync('guideSkipped');
+    if (showGuide !== this.data.showGuide) this.setData({ showGuide: showGuide });
     cloudsync.hydrateTodayCheckins().then(function () { this.refresh(); }.bind(this)).catch(function () {});
     cloudsync.familyInfo().then(function (info) {
       this.setData({ familyJoined: !!info });
@@ -42,11 +46,12 @@ Page({
     }.bind(this)).catch(function () {});
   },
   goFamily() { wx.switchTab({ url: '/pages/profile/profile' }); },
+  goGuide() { wx.navigateTo({ url: '/pages/onboarding/onboarding' }); },
   refresh() {
     const profile = app.globalData.profile;
     const me = cloudsync.myGender();
     const person = profile[me];
-    const menu = mealplan.generateWeekMenu(app.globalData.fridge, { tasteLevel: person.tasteLevel || '微辣', favs: person.favs || [] })[0];
+    const menu = mealplan.generateWeekMenu(app.globalData.fridge, { tasteLevel: person.tasteLevel || '微辣', favs: person.favs || [], tags: person.tags || [] })[0];
     // 自动日志：记录今日晚餐（我的页近7天日志读取）
     wx.setStorageSync('menu-' + date.todayStr(), menu.dinner + ' + ' + menu.side);
     const expiring = app.globalData.fridge
@@ -117,23 +122,34 @@ Page({
     this.syncCheckinNow();
     this.refresh();
   },
+  // 三餐打卡选项：食堂新加；因 showActionSheet 上限 6 项，改自定义底部弹层
   tapMeal(e) {
     const k = e.currentTarget.dataset.k;
-    const labels = ['按菜单吃', '在家做', '外卖', '聚餐', '外食', '没吃'];
-    const keys = ['menu', 'home', 'takeout', 'party', 'out', 'skip'];
-    wx.showActionSheet({
-      itemList: labels,
-      success: function (res) {
-        const me = cloudsync.myGender();
-        const key = 'meals-' + me + '-' + date.todayStr();
-        const meals = wx.getStorageSync(key) || {};
-        meals[k] = keys[res.tapIndex];
-        wx.setStorageSync(key, meals);
-        buzz();
-        this.syncCheckinNow();
-        this.refresh();
-      }.bind(this)
-    });
+    const list = [
+      { k: 'menu', label: '🍚 按菜单吃' },
+      { k: 'home', label: '🍳 在家做' },
+      { k: 'canteen', label: '🏢 食堂' },
+      { k: 'takeout', label: '🛵 外卖' },
+      { k: 'party', label: '🎉 聚餐' },
+      { k: 'out', label: '🍽️ 外食' },
+      { k: 'skip', label: '🚫 没吃' }
+    ];
+    this.setData({ mealSheet: { show: true, k: k, list: list } });
+  },
+  closeMealSheet() { this.setData({ 'mealSheet.show': false }); },
+  pickMeal(e) {
+    const k = this.data.mealSheet.k;
+    const v = e.currentTarget.dataset.v;
+    this.setData({ 'mealSheet.show': false });
+    if (!k || !v) return;
+    const me = cloudsync.myGender();
+    const key = 'meals-' + me + '-' + date.todayStr();
+    const meals = wx.getStorageSync(key) || {};
+    meals[k] = v;
+    wx.setStorageSync(key, meals);
+    buzz();
+    this.syncCheckinNow();
+    this.refresh();
   },
   toggleSupp(e) {
     const key = e.currentTarget.dataset.key;

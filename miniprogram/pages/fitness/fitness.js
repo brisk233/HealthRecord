@@ -13,7 +13,7 @@ Page({
   data: {
     profile: {}, person: {}, week: [], today: {}, streak: 0, records: [], lib: ex.EXERCISE_LIB,
     customType: '篮球', customName: '', customMinutes: 60, todayCustom: null,
-    dragIdx: -1, order: [0, 1, 2, 3, 4, 5, 6], moduleOff: false
+    dragIdx: -1, order: [0, 1, 2, 3, 4, 5, 6], moduleOff: false, libOpen: {}
   },
   onShow() {
     this.refresh();
@@ -36,7 +36,7 @@ Page({
       const c = wx.getStorageSync(customKey(me, d));
       const tOk = !!wx.getStorageSync(trainKey(me, d));
       week.push({
-        weekday: date.weekdayZh(d), date: d,
+        weekday: date.weekdayZh(d), date: d, isFuture: d > today, isPast: d < today,
         title: c ? (c.type + ' · ' + c.minutes + '分钟') : item.title,
         time: c ? '自定义' : item.time,
         checked: !!(tOk || c),
@@ -73,6 +73,20 @@ Page({
     if (saved && saved.length === 7 && new Set(saved).size === 7) return saved;
     return [0, 1, 2, 3, 4, 5, 6];
   },
+  // F1：整行点击补卡/打卡（过去/今天可点，未来不可）
+  onWeekTap(e) {
+    const d = e.currentTarget.dataset.date;
+    const me = cloudsync.myGender();
+    const today = date.todayStr();
+    if (d > today) { wx.showToast({ title: '还没到这一天哦', icon: 'none' }); return; }
+    const key = trainKey(me, d);
+    const cur = !!wx.getStorageSync(key);
+    wx.setStorageSync(key, !cur);
+    this.syncNow();
+    buzz();
+    wx.showToast({ title: !cur ? (d === today ? '打卡成功 🎉' : '已补卡 ✅') : '已取消', icon: 'none' });
+    this.refresh();
+  },
   onDragStart(e) { drag.startDrag(this, e, 'week'); },
   onDragMove(e) {
     drag.moveDrag(this, e, 'week', function (list) {
@@ -94,17 +108,32 @@ Page({
     cloudsync.pushHome({ profile: profile });
     this.refresh();
   },
+  // F5：恢复默认前确认
   resetOrder() {
-    const profile = app.globalData.profile;
-    const me = cloudsync.myGender();
-    profile.trainOrder = profile.trainOrder || {};
-    profile.trainOrder[me] = [0, 1, 2, 3, 4, 5, 6];
-    wx.setStorageSync('profile', profile);
-    cloudsync.pushHome({ profile: profile });
-    this.refresh();
-    wx.showToast({ title: '已恢复默认课表', icon: 'success' });
+    const that = this;
+    wx.showModal({
+      title: '恢复默认课表',
+      content: '将取消你调整过的训练顺序。确定？',
+      confirmText: '恢复默认',
+      success: function (res) {
+        if (!res.confirm) return;
+        const profile = app.globalData.profile;
+        const me = cloudsync.myGender();
+        profile.trainOrder = profile.trainOrder || {};
+        profile.trainOrder[me] = [0, 1, 2, 3, 4, 5, 6];
+        wx.setStorageSync('profile', profile);
+        cloudsync.pushHome({ profile: profile });
+        that.refresh();
+        wx.showToast({ title: '已恢复默认课表', icon: 'success' });
+      }
+    });
   },
-  pickType(e) { this.setData({ customType: e.currentTarget.dataset.t }); },
+  pickType(e) {
+    const t = e.currentTarget.dataset.t;
+    const patch = { customType: t };
+    if (t === '其他') patch.customFocus = true; // F2：自动聚焦输入框
+    this.setData(patch);
+  },
   pickMin(e) { this.setData({ customMinutes: Number(e.currentTarget.dataset.m) }); },
   onCustomName(e) { this.setData({ customName: e.detail.value }); },
   syncNow() {
@@ -122,6 +151,9 @@ Page({
   checkinCustom() {
     const me = cloudsync.myGender();
     const today = date.todayStr();
+    if (this.data.customType === '其他' && !String(this.data.customName || '').trim()) {
+      wx.showToast({ title: '先填运动名称，如骑行', icon: 'none' }); return;
+    }
     const type = this.data.customType === '其他' ? (this.data.customName || '其他运动') : this.data.customType;
     const rec = { type: type, minutes: this.data.customMinutes, date: today };
     wx.setStorageSync(customKey(me, today), rec);
@@ -144,5 +176,12 @@ Page({
     buzz();
     wx.showToast({ title: this.data.today.checked ? '已取消' : '打卡成功 🎉', icon: 'success' });
     this.refresh();
+  },
+  // F4：训练库分组折叠
+  toggleLib(e) {
+    const g = e.currentTarget.dataset.group;
+    const libOpen = Object.assign({}, this.data.libOpen);
+    libOpen[g] = !libOpen[g];
+    this.setData({ libOpen: libOpen });
   }
 });

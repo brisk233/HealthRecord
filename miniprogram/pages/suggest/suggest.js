@@ -1,8 +1,20 @@
 const cloudsync = require('../../utils/cloudsync.js');
 
 Page({
-  data: { text: '', images: [], submitting: false },
-  onText(e) { this.setData({ text: e.detail.value }); },
+  data: { text: '', images: [], submitting: false, canAddImg: true },
+  onLoad() {
+    // S2：恢复上次未提交的草稿
+    const draft = wx.getStorageSync('suggestDraft');
+    if (draft) this.setData({ text: draft });
+  },
+  onUnload() {
+    // S2：离开时保存草稿（提交成功后会清除）
+    if (this.data.text) wx.setStorageSync('suggestDraft', this.data.text);
+  },
+  onText(e) {
+    this.setData({ text: e.detail.value });
+    wx.setStorageSync('suggestDraft', e.detail.value);
+  },
   pickImage() {
     const left = 3 - this.data.images.length;
     if (left <= 0) { wx.showToast({ title: '最多添加 3 张图片', icon: 'none' }); return; }
@@ -12,7 +24,8 @@ Page({
         count: left, mediaType: ['image'], sourceType: ['album'], sizeType: ['compressed'],
         success: (res) => {
           const paths = (res.tempFiles || []).map(function (f) { return f.tempFilePath; });
-          this.setData({ images: this.data.images.concat(paths) });
+          const images = this.data.images.concat(paths);
+          this.setData({ images: images, canAddImg: images.length < 3 });
         }
       });
     };
@@ -23,7 +36,7 @@ Page({
     const idx = e.currentTarget.dataset.idx;
     const images = this.data.images.slice();
     images.splice(idx, 1);
-    this.setData({ images: images });
+    this.setData({ images: images, canAddImg: images.length < 3 });
   },
   previewImage(e) {
     const urls = this.data.images;
@@ -52,6 +65,7 @@ Page({
     }).then(function (r) {
       wx.hideLoading();
       if (r && r.ok) {
+        wx.removeStorageSync('suggestDraft'); // S2：提交成功清草稿
         wx.showToast({ title: '已提交，感谢反馈 🎉', icon: 'success' });
         setTimeout(function () { wx.navigateBack({ fail: function () {} }); }, 600);
       } else {

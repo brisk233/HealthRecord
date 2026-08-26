@@ -1,18 +1,24 @@
 @echo off
 chcp 65001 >nul
 cd /d %~dp0
-echo ===== 欢洋生活 一键自测 ======
+echo ===== 欢洋生活 一键全量自测 ======
 echo.
-echo [1/3] JS 语法检查（node --check）
+echo [1/4] JS 语法检查（node --check）
+set FAIL=0
 for /r %%f in (*.js) do (
   echo %%f | findstr /i node_modules >nul && goto :skipjs
-  node --check %%f 2>nul || echo FAIL: %%f
+  node --check %%f 2>nul || (echo FAIL: %%f & set FAIL=1)
   :skipjs
 )
-echo [2/3] 单元测试
+if "%FAIL%"=="1" (echo   语法检查有失败!) else (echo   全部通过)
+echo.
+echo [2/4] WXML 标签平衡校验
+node tests/wxml-check.js
+echo.
+echo [3/4] 单元测试
 node tests/run-tests.js
 echo.
-echo [3/3] 提示：请确认开发者工具已重新编译 + 手机上为最新体验版
-echo 版本号可在「我的」页底部查看，当前代码版本见 miniprogram\app.js
+echo [4/4] 完成。确认无误后：开发者工具重新编译 + 小程序后台选体验版
+echo 版本号见 miniprogram\app.js
 echo.
 pause

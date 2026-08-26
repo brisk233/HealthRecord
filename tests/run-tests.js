@@ -121,6 +121,97 @@ t('seed 档案含 habits/modules/tags', function () {
   eq(seed.defaultProfile.female.modules.length, 3);
 });
 
+console.log('== 习惯↔菜单映射与首次引导 ==');
+const lifestyleFridge = function () {
+  const t0 = require(mp('utils/date.js')).todayStr();
+  return [
+    { id: '1', name: '吊龙(切片)', cat: 'marinated', box: '①', purchased: t0, note: '' },
+    { id: '2', name: '辣椒(切圈)', cat: 'veggie', box: '②', purchased: t0, note: '' },
+    { id: '3', name: '叶子菜(洗切)', cat: 'leaf', box: '③', purchased: t0, note: '' },
+    { id: '4', name: '鸡蛋', cat: 'egg', box: '④', purchased: t0, note: '' }
+  ];
+};
+t('菜单：运动型优先高蛋白菜（涮牛肉锅）', function () {
+  const d = mealplan.generateWeekMenu(lifestyleFridge(), { tasteLevel: '清淡', favs: [], tags: ['💪 运动型'] })[0];
+  if (d.dinner !== '涮牛肉锅') throw new Error('运动型应首选高蛋白涮牛肉锅，实际 ' + d.dinner);
+});
+t('菜单：懒狗型不选 30 分钟慢菜', function () {
+  const d = mealplan.generateWeekMenu(lifestyleFridge(), { tasteLevel: '偏辣', favs: [], tags: ['🐶 懒狗型'] })[0];
+  if (d.dinner === '涮牛肉锅' || parseInt(d.cookTime, 10) > 15) throw new Error('懒狗型不应首选慢菜，实际 ' + d.dinner + ' ' + d.cookTime);
+});
+t('lifestyleScore：运动型高蛋白/懒狗型快手/夜猫型避辣直接生效', function () {
+  if (mealplan.lifestyleScore({ proteinG: 35, cookTime: '30分钟', spicy: 0 }, ['💪 运动型']) >= 0) throw new Error('运动型未给高蛋白负分');
+  if (mealplan.lifestyleScore({ proteinG: 10, cookTime: '10分钟', spicy: 0 }, ['🐶 懒狗型']) >= 0) throw new Error('懒狗型未给快手负分');
+  if (mealplan.lifestyleScore({ proteinG: 10, cookTime: '10分钟', spicy: 2 }, ['🌙 夜猫型']) <= 0) throw new Error('夜猫型未给辣菜正分');
+  if (mealplan.lifestyleScore({ proteinG: 35, cookTime: '30分钟', spicy: 0, veg: '叶子菜', elements: ['a', 'b', 'c'] }, ['🧘 养生型']) >= 0) throw new Error('养生型未给健康菜负分');
+});
+t('菜单：夜猫型/养生型避开辣菜', function () {
+  const d1 = mealplan.generateWeekMenu(lifestyleFridge(), { tasteLevel: '清淡', favs: [], tags: ['🌙 夜猫型'] })[0];
+  if (d1.dinner === '吊龙炒辣椒' || d1.dinner === '辣椒炒蛋') throw new Error('夜猫型不应首选辣菜: ' + d1.dinner);
+  const d2 = mealplan.generateWeekMenu(lifestyleFridge(), { tasteLevel: '清淡', favs: [], tags: ['🧘 养生型'] })[0];
+  if (d2.dinner === '吊龙炒辣椒' || d2.dinner === '辣椒炒蛋') throw new Error('养生型不应首选辣菜: ' + d2.dinner);
+});
+
+t('首次进入：无标签且未跳过 → 首页显示引导提示条（不强制跳转）', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  profile.male.tags = [];
+  installMocks(profile);
+  let navCount = 0;
+  global.wx.navigateTo = function () { navCount++; };
+  const getCfg = capturePage();
+  loadPage('pages/today/today.js');
+  const page = makePage(getCfg(), ['onShow', 'refresh']);
+  page.onShow();
+  if (page.data.showGuide !== true) throw new Error('首次应显示引导提示条 showGuide=true');
+  if (navCount !== 0) throw new Error('不应强制跳转引导页');
+  page.onShow();
+  if (navCount !== 0) throw new Error('重复 onShow 不应跳转');
+});
+
+t('首次进入：已跳过或已有标签 → 不跳转', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  profile.male.tags = [];
+  installMocks(profile);
+  mockStorage.guideSkipped = 1;
+  let navCount = 0;
+  global.wx.navigateTo = function () { navCount++; };
+  const getCfg = capturePage();
+  loadPage('pages/today/today.js');
+  const page = makePage(getCfg(), ['onShow', 'refresh']);
+  page.onShow();
+  if (navCount !== 0) throw new Error('跳过标记下不应跳转');
+  const profile2 = JSON.parse(JSON.stringify(seed.defaultProfile));
+  profile2.male.tags = ['💪 运动型'];
+  installMocks(profile2);
+  loadPage('pages/today/today.js');
+  const page2 = makePage(getCfg(), ['onShow', 'refresh']);
+  page2.onShow();
+  if (navCount !== 0) throw new Error('已有标签不应跳转');
+});
+
+t('重新选择：保留自定义习惯、替换推荐、跳过写标记', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  profile.male.habits = [
+    { key: 'c1', name: '练字', icon: '✍️', freq: '每天' },
+    { key: 'r1', name: '跑步3公里', icon: '🏃', freq: '每周3次' }
+  ];
+  installMocks(profile);
+  mockStorage.myGender = 'male';
+  const getCfg = capturePage();
+  loadPage('pages/onboarding/onboarding.js');
+  const page = makePage(getCfg(), ['onLoad', 'toggleMajor', 'toggleSub', 'finish', 'skip']);
+  page.onLoad();
+  page.toggleMajor({ currentTarget: { dataset: { k: 'health' } } });
+  page.finish();
+  const habits = profile.male.habits;
+  if (!habits.some(function (h) { return h.name === '练字'; })) throw new Error('自定义习惯被清掉');
+  if (habits.some(function (h) { return h.name === '跑步3公里'; })) throw new Error('旧推荐习惯未替换');
+  if (!habits.some(function (h) { return h.name === '喝水8杯'; })) throw new Error('新推荐习惯未生成');
+  if (mockStorage.guideSkipped) throw new Error('完成后应清除跳过标记');
+  page.skip();
+  if (!mockStorage.guideSkipped) throw new Error('跳过未写标记');
+});
+
 console.log('== seed / exercises ==');
 t('档案与冰箱', function () {
   eq(seed.defaultProfile.male.suppEnabled, true);
@@ -145,7 +236,7 @@ function installMocks(profile) {
     removeStorageSync: function (k) { delete mockStorage[k]; },
     clearStorageSync: function () { mockStorage = {}; },
     cloud: { callFunction: function () { return Promise.resolve({ result: null }); }, init: function () {} },
-    showToast: function () {}, showModal: function () {}, showActionSheet: function () {},
+    showToast: function () {}, showModal: function (opt) { if (opt && opt.success) opt.success({ confirm: true }); }, showActionSheet: function () {},
     showLoading: function () {}, hideLoading: function () {},
     vibrateShort: function () {}, requestSubscribeMessage: function () {},
     setClipboardData: function () {}, navigateTo: function () {}, navigateBack: function () {}, switchTab: function () {}
@@ -383,17 +474,23 @@ t('云端合并不丢 trainOrder（健身课表排序持久化）', function () 
   if (!merged.trainOrder || merged.trainOrder.male[0] !== 6) throw new Error('trainOrder 被合并逻辑丢弃');
 });
 
-t('今日三餐打卡：选择后写入 meals 存储', function () {
+t('今日三餐打卡：选择后写入 meals 存储（含食堂选项）', function () {
   const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
   installMocks(profile);
-  global.wx.showActionSheet = function (opt) { if (opt.success) opt.success({ tapIndex: 0 }); };
   const getCfg = capturePage();
   loadPage('pages/today/today.js');
-  const page = makePage(getCfg(), ['refresh', 'tapMeal', 'toggleSupp', 'toggleHabit']);
+  const page = makePage(getCfg(), ['refresh', 'tapMeal', 'pickMeal', 'toggleSupp', 'toggleHabit']);
   page.refresh();
   page.tapMeal({ currentTarget: { dataset: { k: 'd' } } });
+  if (!page.data.mealSheet.show || page.data.mealSheet.list.length !== 7) throw new Error('弹层未打开或选项数不对');
+  // 食堂：直接选新选项
+  page.pickMeal({ currentTarget: { dataset: { v: 'canteen' } } });
   const key = 'meals-male-' + require(mp('utils/date.js')).todayStr();
-  if (!mockStorage[key] || mockStorage[key].d !== 'menu') throw new Error('晚餐打卡未写入');
+  if (!mockStorage[key] || mockStorage[key].d !== 'canteen') throw new Error('食堂打卡未写入');
+  // 按菜单吃
+  page.tapMeal({ currentTarget: { dataset: { k: 'l' } } });
+  page.pickMeal({ currentTarget: { dataset: { v: 'menu' } } });
+  if (!mockStorage[key] || mockStorage[key].l !== 'menu') throw new Error('午餐打卡未写入');
   page.toggleSupp({ currentTarget: { dataset: { key: 'fishOil' } }, detail: { value: true } });
   const supKey = 'supps-male-' + require(mp('utils/date.js')).todayStr();
   if (!mockStorage[supKey] || !mockStorage[supKey].fishOil) throw new Error('补剂打卡未写入');
@@ -697,6 +794,65 @@ t('健身页 moduleOff：按 modules 计算且空数组不重置', function () {
   if (page.data.moduleOff !== false) throw new Error('开启 fitness 后 moduleOff 应为 false');
 });
 
+t('喜欢食材弹层确认=全量同步：取消勾选即移除（树内），手输自定义不受影响', function () {
+  const foodtree = require(mp('data/foodtree.js'));
+  const treeNames = {};
+  foodtree.forEach(function (l1) {
+    (l1.children || []).forEach(function (l2) {
+      (l2.items || []).forEach(function (it) { treeNames[it.name] = true; });
+    });
+  });
+  // 已选：牛腩 + 手输 腊肉；弹层取消牛腩、勾选吊龙
+  let favs = ['牛腩', '腊肉'];
+  const chosen = ['吊龙'];
+  const favHidden = [];
+  chosen.forEach(function (v) {
+    const hi = favHidden.indexOf(v);
+    if (hi !== -1) favHidden.splice(hi, 1);
+    if (favs.indexOf(v) === -1) { favs.push(v); }
+  });
+  favs = favs.filter(function (v) {
+    if (treeNames[v] && chosen.indexOf(v) === -1) return false;
+    return true;
+  });
+  if (favs.indexOf('牛腩') !== -1) throw new Error('取消的牛腩未移除');
+  if (favs.indexOf('腊肉') === -1) throw new Error('手输的腊肉被误删');
+  if (favs.indexOf('吊龙') === -1) throw new Error('勾选的吊龙未添加');
+  if (favs.length !== 2) throw new Error('最终应为 腊肉+吊龙，实际 ' + favs.join('/'));
+});
+
+t('食材树选择器：点选后渲染源 curL1 同步勾选、可移除、单选只留一个', function () {
+  // 组件模板不能加载（WXML 不走 node），直接模拟 Component 逻辑
+  let cfg = null;
+  const oldComponent = global.Component;
+  global.Component = function (c) { cfg = c; };
+  delete require.cache[require.resolve(mp('components/tree-picker/tree-picker.js'))];
+  require(mp('components/tree-picker/tree-picker.js'));
+  global.Component = oldComponent;
+  const inst = {
+    data: JSON.parse(JSON.stringify(cfg.data)),
+    setData: function (p) { Object.keys(p).forEach(function (k) { inst.data[k] = p[k]; }); },
+    triggerEvent: function () {}
+  };
+  Object.keys(cfg.methods).forEach(function (k) { inst[k] = cfg.methods[k].bind(inst); });
+  // 多选
+  inst.open({ title: 't', mode: 'multi' });
+  inst.toggleLeaf({ currentTarget: { dataset: { pos: '牛肉|0' } } });
+  if (inst.data.chosen.indexOf('牛腩') === -1) throw new Error('多选点选后 chosen 不含牛腩');
+  if (inst.data.curL1.children[0].items[0].checked !== true) throw new Error('渲染源 curL1 未同步勾选（选中标识不显示）');
+  inst.toggleLeaf({ currentTarget: { dataset: { pos: '牛肉|1' } } });
+  if (inst.data.chosen.length !== 2) throw new Error('多选第二项失败: ' + inst.data.chosen.join('/'));
+  // 移除
+  inst.removeChosen({ currentTarget: { dataset: { v: '牛腩' } } });
+  if (inst.data.chosen.indexOf('牛腩') !== -1) throw new Error('移除牛腩失败');
+  if (inst.data.curL1.children[0].items[0].checked !== false) throw new Error('移除后渲染源未清除勾选');
+  // 单选：只留一个
+  inst.open({ title: 's', mode: 'single' });
+  inst.toggleLeaf({ currentTarget: { dataset: { pos: '牛肉|0' } } });
+  inst.toggleLeaf({ currentTarget: { dataset: { pos: '牛肉|1' } } });
+  if (inst.data.chosen.length !== 1 || inst.data.chosen[0] !== '吊龙') throw new Error('单选应只留最后一项: ' + inst.data.chosen.join('/'));
+});
+
 t('WXML 扫描：全量模板禁止 indexOf 方法调用', function () {
   const fs = require('fs');
   const walk = function (dir) {
@@ -707,6 +863,12 @@ t('WXML 扫描：全量模板禁止 indexOf 方法调用', function () {
       else if (name.indexOf('.wxml') !== -1) {
         const txt = fs.readFileSync(full, 'utf8');
         if (/\.indexOf\s*\(/.test(txt)) throw new Error(full + ' 含 WXML 不支持的 indexOf 方法调用');
+        // WXML 模板 {{ }} 中禁止调用自定义函数（如 {{foo(idx)}}），否则编译失败、页面不响应
+        const callInExpr = /\{\{[^}]*[A-Za-z_$][A-Za-z0-9_$]*\s*\([^}]*\}\}/;
+        if (callInExpr.test(txt)) {
+          const m = txt.match(callInExpr);
+          throw new Error(full + ' 含 WXML 不支持的函数调用: ' + String(m && m[0]).slice(0, 60));
+        }
       }
     });
   };

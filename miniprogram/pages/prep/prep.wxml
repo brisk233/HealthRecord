@@ -11,12 +11,13 @@
     <view class="row">
       <text class="muted" style="margin:0;">已买 {{buyDone}}/{{purchase.length}}</text>
       <view class="bar-wrap"><view class="bar" style="width:{{buyPct}}%;"></view></view>
+      <text class="link-btn" style="margin-left:12rpx;flex-shrink:0;" bindtap="toggleAllBuy">{{allBought ? '取消全选' : '一键全选'}}</text>
     </view>
-    <view class="row" wx:for="{{purchase}}" wx:key="name">
+    <view class="row" wx:for="{{purchase}}" wx:key="name" bindtap="toggleBuy" data-idx="{{index}}" hover-class="row-hover">
       <view><text>{{item.name}}</text><text class="muted" style="margin-left:12rpx;">{{item.zone}}</text></view>
       <view style="display:flex;align-items:center;">
-        <text>{{item.amount}}</text>
-        <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleBuy" style="margin-left:12rpx;" color="#2FB287"/>
+        <text style="margin-right:12rpx;">{{item.amount}}</text>
+        <view class="cb {{item.done ? 'on' : ''}}">{{item.done ? '✓' : ''}}</view>
       </view>
     </view>
   </view>
@@ -25,11 +26,12 @@
     <view class="row">
       <text class="muted" style="margin:0;">完成 {{stepDone}}/{{steps.length}}</text>
       <view class="bar-wrap"><view class="bar" style="width:{{stepPct}}%;"></view></view>
+      <text class="link-btn" style="margin-left:12rpx;flex-shrink:0;" bindtap="toggleAllSteps">{{allSteps ? '取消全选' : '一键全选'}}</text>
     </view>
-    <view class="row" wx:for="{{steps}}" wx:key="t">
+    <view class="row" wx:for="{{steps}}" wx:key="t" bindtap="toggleStep" data-idx="{{index}}" hover-class="row-hover">
       <text class="tag">{{item.t}}</text>
       <view style="flex:1;margin:0 16rpx;">{{item.task}}</view>
-      <checkbox checked="{{item.done}}" data-idx="{{index}}" bindtap="toggleStep" color="#2FB287"/>
+      <view class="cb {{item.done ? 'on' : ''}}">{{item.done ? '✓' : ''}}</view>
     </view>
     <view class="list-note">分装标签规则：每盒 = 菜名 + 计划食用日 + 做法（如「吊龙·周二炒」）</view>
   </view>

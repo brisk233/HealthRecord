@@ -18,8 +18,8 @@
       <view class="chip {{customType==='羽毛球'?'on':''}}" bindtap="pickType" data-t="羽毛球">🏸 羽毛球</view>
       <view class="chip {{customType==='其他'?'on':''}}" bindtap="pickType" data-t="其他">✍️ 其他</view>
     </view>
-    <input wx:if="{{customType==='其他'}}" class="input" placeholder="运动名称，如：骑行 / 游泳" value="{{customName}}" bindinput="onCustomName"/>
-    <view class="muted" style="margin-top:4rpx;">时长</view>
+    <input wx:if="{{customType==='其他'}}" class="input" focus="{{customFocus || false}}" placeholder="运动名称，如：骑行 / 游泳" value="{{customName}}" bindinput="onCustomName"/>
+    <view class="muted" style="margin-top:4rpx;">时长（选一个）</view>
     <view style="display:flex;flex-wrap:wrap;margin-top:8rpx;">
       <view class="chip {{customMinutes===30?'on':''}}" bindtap="pickMin" data-m="30">30分钟</view>
       <view class="chip {{customMinutes===45?'on':''}}" bindtap="pickMin" data-m="45">45分钟</view>
@@ -31,18 +31,19 @@
       <button class="btn-ghost btn-sm" hover-class="btn-hover" bindtap="cancelCustom">取消</button>
     </view>
     <button class="btn-primary" hover-class="btn-hover" bindtap="checkinCustom">{{todayCustom ? '🔄 更新' : '✅ 打卡运动'}}</button>
+    <view class="list-note">自定义运动会覆盖「今日训练」的课表打卡</view>
   </view>
 
   <view class="card">
     <view class="card-title">⚡ 今日训练 · {{person.name}}</view>
     <view class="row"><text style="font-weight:600;">{{today.title}}</text><text class="tag">{{today.time}}</text></view>
     <view class="muted">{{today.detail}}</view>
-    <button class="btn-primary {{today.checked?'btn-ghost':''}}" hover-class="btn-hover" bindtap="checkin">{{today.checked ? '✅ 已打卡' : '✅ 打卡'}}</button>
+    <button class="btn-primary {{today.checked?'btn-ghost':''}}" hover-class="btn-hover" bindtap="checkin">{{today.checked ? '✅ 已打卡 · 点此取消' : '✅ 打卡'}}</button>
   </view>
 
   <view class="card">
-    <view class="card-title">🗓️ 本周课表 <text class="muted" style="font-size:22rpx;">拖住 ☰ 调整顺序</text></view>
-    <view class="row drag-row" wx:for="{{week}}" wx:key="date" style="opacity:{{dragIdx===index?0.55:1}};">
+    <view class="card-title">🗓️ 本周课表 <text class="muted" style="font-size:22rpx;">点某天补卡 · 拖住 ☰ 调整顺序</text></view>
+    <view class="row drag-row" wx:for="{{week}}" wx:key="date" style="opacity:{{dragIdx===index?0.55:1}};" bindtap="onWeekTap" data-date="{{item.date}}" hover-class="row-hover">
       <view style="display:flex;align-items:center;flex:1;">
         <view class="drag-handle" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" data-idx="{{index}}">☰</view>
         <view style="flex:1;">
@@ -50,9 +51,9 @@
           <view class="muted">{{item.title}} · {{item.time}}</view>
         </view>
       </view>
-      <text class="tag {{item.checked?'':'warn'}}">{{item.checked ? '✅ 完成' : (item.isToday ? '待打卡' : '未完成')}}</text>
+      <text class="tag {{item.checked?'':'warn'}}">{{item.checked ? '✅ 完成' : (item.isFuture ? '未开始' : (item.isToday ? '待打卡' : '未完成 · 点补卡'))}}</text>
     </view>
-    <button class="btn-ghost" hover-class="btn-hover" bindtap="resetOrder">↩️ 恢复默认课表</button>
+    <button class="btn-ghost btn-sm" hover-class="btn-hover" style="display:block;margin:20rpx auto 0;" bindtap="resetOrder">↩️ 恢复默认课表</button>
   </view>
 
   <view class="card" wx:if="{{records.length > 0}}">
@@ -64,10 +65,15 @@
   </view>
 
   <view class="card" wx:for="{{lib}}" wx:key="group" wx:for-item="g">
-    <view class="card-title">🏋️ {{g.group}} <text class="muted" style="font-size:22rpx;">{{g.where}}</text></view>
+    <view class="card-title" style="display:flex;align-items:center;justify-content:space-between;" bindtap="toggleLib" data-group="{{g.group}}" hover-class="row-hover">
+      <text>🏋️ {{g.group}}</text>
+      <view style="display:flex;align-items:center;"><text class="muted" style="margin:0 8rpx 0 0;font-size:22rpx;">{{g.where}}</text><text style="color:#B9C7C0;">{{libOpen[g.group] ? '▴' : '▾'}}</text></view>
+    </view>
+    <block wx:if="{{libOpen[g.group]}}">
     <view class="row" wx:for="{{g.items}}" wx:key="name" wx:for-item="it">
       <text>{{it.name}}</text><text class="muted" style="margin:0;">{{it.set}}</text>
     </view>
+    </block>
   </view>
   </block>
 </view>

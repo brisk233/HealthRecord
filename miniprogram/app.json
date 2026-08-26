@@ -25,23 +25,33 @@
     "list": [
       {
         "pagePath": "pages/today/today",
-        "text": "🏠 今日"
+        "text": "今日",
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/meals/meals",
-        "text": "📅 菜单"
+        "text": "菜单",
+        "iconPath": "assets/tabbar/menu.png",
+        "selectedIconPath": "assets/tabbar/menu-active.png"
       },
       {
         "pagePath": "pages/fitness/fitness",
-        "text": "💪 健身"
+        "text": "健身",
+        "iconPath": "assets/tabbar/fitness.png",
+        "selectedIconPath": "assets/tabbar/fitness-active.png"
       },
       {
         "pagePath": "pages/fridge/fridge",
-        "text": "🧊 冰箱"
+        "text": "冰箱",
+        "iconPath": "assets/tabbar/fridge.png",
+        "selectedIconPath": "assets/tabbar/fridge-active.png"
       },
       {
         "pagePath": "pages/profile/profile",
-        "text": "👤 我的"
+        "text": "我的",
+        "iconPath": "assets/tabbar/profile.png",
+        "selectedIconPath": "assets/tabbar/profile-active.png"
       }
     ]
   },

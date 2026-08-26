@@ -22,7 +22,6 @@
         <input class="nick-input-dark" type="nickname" placeholder="我的昵称" value="{{nickname}}" bindinput="onNickname" bindblur="onNicknameBlur"/>
         <view class="muted" style="margin-top:6rpx;font-size:22rpx;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{{family ? '🏠 ' + (family.name || '我们的家') : '未加入家庭'}}</view>
       </view>
-      <text wx:if="{{loggedIn}}" class="muted" style="margin:0 0 0 8rpx;flex-shrink:0;font-size:22rpx;" bindtap="logout">退出</text>
     </view>
   </view>
 
@@ -50,7 +49,7 @@
         <view style="padding:12rpx 4rpx 12rpx 16rpx;" catchtap="toggleFamily"><text class="muted">{{familyOpen ? '收起 ▴' : '成员' + family.members.length + ' · ▾'}}</text></view>
       </view>
     </view>
-    <block wx:if="{{familyOpen}}">
+    <view class="panel" wx:if="{{familyOpen}}">
     <view class="row" wx:for="{{family.members}}" wx:key="openid">
       <view style="display:flex;align-items:center;">
         <image wx:if="{{item.avatarUrl && !item.avatarErr}}" src="{{item.avatarUrl}}" class="avatar-sm" mode="aspectFill" binderror="onAvatarError" data-idx="{{index}}"/>
@@ -69,7 +68,7 @@
     </block>
     <view wx:else class="list-note">🔒 邀请与改名由家庭创建者管理</view>
     <button class="btn-ghost" hover-class="btn-hover" style="color:#C23B3B;border-color:#C23B3B;" bindtap="leaveFamily">{{myRole === 'creator' ? '解散家庭' : '退出家庭'}}</button>
-    </block>
+    </view>
   </view>
 
   <view class="card">
@@ -77,7 +76,7 @@
       <text>📋 我的基础数据</text>
       <text class="muted" style="margin:0;">{{baseOpen ? '收起 ▴' : (person.goal + ' · ' + person.height + 'cm/' + person.weight + 'kg · 蛋白' + protein + 'g ▾')}}</text>
     </view>
-    <block wx:if="{{baseOpen}}">
+    <view class="panel" wx:if="{{baseOpen}}">
       <picker range="{{genders}}" value="{{genderIdx}}" bindchange="onGender">
         <view class="input">我是：{{genders[genderIdx]}}</view>
       </picker>
@@ -90,7 +89,7 @@
       <view class="row"><text>🔥 每日热量目标</text><text class="tag">{{calorie}} kcal</text></view>
       <view class="muted">BMI：{{bmi}}（18.5~24 为正常）</view>
       <button class="btn-primary" hover-class="btn-hover" bindtap="save">保存</button>
-    </block>
+    </view>
   </view>
 
   <view class="card">
@@ -98,14 +97,14 @@
       <text>💊 补剂打卡</text>
       <text class="muted" style="margin:0;">{{suppOpen ? '收起 ▴' : '共 ' + person.supps.length + ' 种 · ' + (person.suppEnabled !== false ? '今日页显示' : '已隐藏') + ' ▾'}}</text>
     </view>
-    <block wx:if="{{suppOpen}}">
+    <view class="panel" wx:if="{{suppOpen}}">
       <view class="row">
         <text>在今日页显示补剂打卡</text>
         <switch checked="{{person.suppEnabled !== false}}" bindchange="onSuppEnabled" color="#2FB287"/>
       </view>
       <view class="row" wx:for="{{person.supps}}" wx:key="key">
         <view style="flex:1;"><text>{{item.name}} · {{item.dose}}</text><view class="muted">{{item.time}}</view></view>
-        <button class="btn-ghost btn-sm" hover-class="btn-hover" data-key="{{item.key}}" bindtap="delSupp">✕</button>
+        <view class="btn-x" hover-class="btn-hover" data-key="{{item.key}}" catchtap="delSupp">✕</view>
       </view>
       <view class="list-note">自定义补剂：</view>
       <input class="input" placeholder="名称，如：钙片" value="{{newSupp.name}}" bindinput="onNewSuppName"/>
@@ -113,7 +112,7 @@
       <input class="input" placeholder="时间，如：随早餐" value="{{newSupp.time}}" bindinput="onNewSuppTime"/>
       <button class="btn-primary" hover-class="btn-hover" bindtap="addSupp">添加补剂</button>
       <view class="list-note">剂量以产品说明与医生建议为准，本工具只做提醒</view>
-    </block>
+    </view>
   </view>
 
   <view class="card">
@@ -121,10 +120,10 @@
       <text>⭐ 我的习惯</text>
       <text class="muted" style="margin:0;">{{habitOpen ? '收起 ▴' : '共' + habitsCount + '个 ▾'}}</text>
     </view>
-    <block wx:if="{{habitOpen}}">
+    <view class="panel" wx:if="{{habitOpen}}">
       <view class="row" wx:for="{{habits}}" wx:key="key">
         <text>{{item.icon}} {{item.name}} · {{item.freq}}</text>
-        <button class="btn-ghost btn-sm" hover-class="btn-hover" data-key="{{item.key}}" bindtap="delHabit">✕</button>
+        <view class="btn-x" hover-class="btn-hover" data-key="{{item.key}}" catchtap="delHabit">✕</view>
       </view>
       <view class="list-note">添加自定义习惯：</view>
       <input class="input" placeholder="名称，如：练字" value="{{newHabit.name}}" bindinput="onNewHabitName"/>
@@ -132,8 +131,9 @@
         <view class="input">频率：{{freqs[freqIdx]}}</view>
       </picker>
       <button class="btn-primary" hover-class="btn-hover" bindtap="addHabit">➕ 添加习惯</button>
+      <button class="btn-ghost" hover-class="btn-hover" bindtap="goOnboarding">🎯 重新选择生活方式</button>
       <button class="btn-ghost" hover-class="btn-hover" bindtap="reGenHabits">🎯 按标签更新习惯</button>
-    </block>
+    </view>
   </view>
 
   <view class="card">
@@ -141,7 +141,7 @@
       <text>🧩 功能模块</text>
       <text class="muted" style="margin:0;">{{modOpen ? '收起 ▴' : '已开 ' + modOnCount + '/3 ▾'}}</text>
     </view>
-    <block wx:if="{{modOpen}}">
+    <view class="panel" wx:if="{{modOpen}}">
       <view class="row" style="opacity:{{item.on ? 1 : 0.4}};" wx:for="{{modRows}}" wx:key="key">
         <text>{{item.name}}</text>
         <view style="display:flex;align-items:center;">
@@ -150,7 +150,7 @@
         </view>
       </view>
       <view class="list-note">关闭后对应内容在今日页隐藏，数据全部保留</view>
-    </block>
+    </view>
   </view>
   <view class="card">
     <view class="card-title" style="display:flex;align-items:center;justify-content:space-between;" bindtap="toggleLog">
@@ -158,7 +158,7 @@
       <text class="muted" style="margin:0;">{{logOpen ? '收起 ▴' : '展开 ▾'}}</text>
     </view>
     <view class="list-note" wx:if="{{logs.length === 0}}">暂无记录 · 去今日页打卡（三餐/补剂/运动/习惯）后自动生成</view>
-    <block wx:if="{{logOpen}}">
+    <view class="panel" wx:if="{{logOpen}}">
       <view class="row" wx:for="{{logs}}" wx:key="date">
         <view style="flex:1;min-width:0;">
           <text>{{item.weekday}} {{item.date}}</text>
@@ -169,7 +169,7 @@
           <text class="tag">{{item.sport}}</text>
         </view>
       </view>
-    </block>
+    </view>
     <block wx:else>
       <view class="row" wx:if="{{logs.length}}">
         <view style="flex:1;min-width:0;">
@@ -190,9 +190,9 @@
       <text>🌙 作息与喜好</text>
       <text class="muted" style="margin:0;">{{prefOpen ? '收起 ▴' : (person.work + ' · 睡' + person.sleep + ' · ' + tasteLevels[tasteIdx] + ' ▾')}}</text>
     </view>
-    <block wx:if="{{prefOpen}}">
-    <view class="row"><text>🕘 上班时间</text><input class="input" style="width:320rpx;margin:0;" value="{{person.work}}" bindblur="onWorkBlur"/></view>
-    <view class="row"><text>😴 睡觉时间</text><input class="input" style="width:320rpx;margin:0;text-align:right;" value="{{person.sleep}}" bindblur="onSleepBlur"/></view>
+    <view class="panel" wx:if="{{prefOpen}}">
+    <view class="row" style="align-items:center;"><text style="flex-shrink:0;">🕘 上班时间</text><input class="input time-input" value="{{person.work}}" placeholder="如 8:30 - 18:30" bindblur="onWorkBlur"/></view>
+    <view class="row" style="align-items:center;"><text style="flex-shrink:0;">😴 睡觉时间</text><input class="input time-input" value="{{person.sleep}}" placeholder="如 23:00" bindblur="onSleepBlur"/></view>
     <picker range="{{tasteLevels}}" value="{{tasteIdx}}" bindchange="onTasteLevel">
       <view class="input">😋 口味：{{tasteLevels[tasteIdx]}}</view>
     </picker>
@@ -205,11 +205,13 @@
     <view class="list-note">已选 {{favs.length}} 种 · {{favLast}}</view>
     <button class="btn-ghost btn-sm" hover-class="btn-hover" bindtap="clearFavs">🗑️ 清空已选食材</button>
     <view style="display:flex;margin-top:12rpx;">
-      <input class="input" style="flex:1;margin:0;" placeholder="自定义添加食材，如：番茄" value="{{favNew}}" bindinput="onFavNew"/>
+      <input class="input" style="flex:1;margin:0;text-align:left;height:76rpx;line-height:76rpx;" placeholder="自定义添加食材，如：番茄" value="{{favNew}}" bindinput="onFavNew"/>
       <button class="btn-add-fav" hover-class="btn-hover" bindtap="addFav">➕ 添加</button>
     </view>
+    <button class="btn-ghost btn-sm" hover-class="btn-hover" style="display:block;margin:16rpx auto 0;" bindtap="openFavTree">🌳 从分类列表选择</button>
+    <tree-picker id="favtp" bind:confirm="onFavTreeConfirm" />
     <view class="list-note">修改即保存 · 清淡避开辣菜，偏辣多排辣菜</view>
-    </block>
+    </view>
   </view>
 
   <view class="card">
@@ -231,6 +233,14 @@
       <view class="list-note">授权时勾选「总是保持以上选择」才能每天收到</view>
     </block>
   </view>
-  <view class="list-note" style="text-align:center;padding:16rpx 0;">欢洋生活 v{{version}}</view>
+  <view class="card">
+    <view class="card-title" style="display:flex;align-items:center;justify-content:space-between;" bindtap="showAbout" hover-class="row-hover">
+      <text>ℹ️ 关于欢洋生活</text>
+      <text class="muted" style="margin:0;">v{{version}} ›</text>
+    </view>
+    <view class="row" bindtap="openPrivacy" hover-class="row-hover"><text>🔒 用户隐私保护指引</text><text class="muted" style="margin:0;">›</text></view>
+    <button class="btn-danger" hover-class="btn-hover" bindtap="logout">退出登录</button>
+    <view class="list-note" style="text-align:center;">退出将清空本机数据（云端保留，重新登录自动恢复）</view>
+  </view>
   </block>
 </view>

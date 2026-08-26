@@ -9,8 +9,8 @@
         <image src="{{item}}" mode="aspectFill" data-idx="{{index}}" bindtap="previewImage"/>
         <view class="img-del" data-idx="{{index}}" catchtap="removeImage">✕</view>
       </view>
-      <view class="img-add" wx:if="{{images.length < 3}}" bindtap="pickImage">➕</view>
+      <view class="img-add" wx:if="{{canAddImg}}" bindtap="pickImage">➕</view>
     </view>
-    <button class="btn-primary" hover-class="btn-hover" bindtap="submit" disabled="{{submitting}}">提交建议</button>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="submit" disabled="{{submitting}}">{{submitting ? '提交中…' : '提交建议'}}</button>
   </view>
 </view>

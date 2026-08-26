@@ -35,18 +35,53 @@ function spicyScore(spicy, tn) {
   if (tn === 3) return spicy >= 2 ? -3 : 3;
   return Math.abs(spicy - 2) * 2;
 }
+function cookTimeMin(t) {
+  const m = /(\d+)\s*分钟/.exec(String(t || ''));
+  return m ? Number(m[1]) : 99;
+}
+// 人格标签 → 菜单加权（负数=更优先），与口味/喜好叠加
+function lifestyleScore(r, tags) {
+  if (!tags || !tags.length) return 0;
+  let s = 0;
+  tags.forEach(function (tag) {
+    if (tag.indexOf('运动型') !== -1) {
+      if ((r.proteinG || 0) >= 35) s -= 3;
+      else if ((r.proteinG || 0) >= 30) s -= 2;
+      else if ((r.proteinG || 0) >= 24) s -= 1;
+    }
+    if (tag.indexOf('养生型') !== -1) {
+      if (r.veg && r.veg !== '-') s -= 1;
+      if ((r.elements || []).length >= 3) s -= 1;
+      if ((r.spicy || 0) >= 2) s += 2;
+    }
+    if (tag.indexOf('吃货型') !== -1) {
+      if ((r.kcal || 0) >= 250) s -= 1;
+      if ((r.elements || []).length >= 2) s -= 1;
+    }
+    if (tag.indexOf('懒狗型') !== -1) {
+      const m = cookTimeMin(r.cookTime);
+      if (m <= 10) s -= 2;
+      else if (m <= 15) s -= 1;
+    }
+    if (tag.indexOf('夜猫型') !== -1) {
+      if ((r.spicy || 0) >= 2) s += 2;
+    }
+  });
+  return s;
+}
 
 // 只挑「主料+配菜都在冰箱」且本周未用过的菜；临期 + 爱吃 + 辣度匹配
 function pickUnused(pool, used, fridge, prefs) {
   const favs = prefs.favs || [];
+  const tags = prefs.tags || [];
   const tn = tasteNum(prefs.tasteLevel || '微辣');
   const candidates = pool.map(function (r) {
     return Object.assign({}, r, dishInfo(r, fridge));
   }).filter(function (r) { return used.indexOf(r.id) === -1; })
     .filter(function (r) { return r.mainOk && r.vegOk; });
   candidates.sort(function (a, b) {
-    const sa = a.dl + spicyScore(a.spicy || 0, tn) + (favs.indexOf(a.main) !== -1 ? -2 : 0);
-    const sb = b.dl + spicyScore(b.spicy || 0, tn) + (favs.indexOf(b.main) !== -1 ? -2 : 0);
+    const sa = a.dl + spicyScore(a.spicy || 0, tn) + (favs.indexOf(a.main) !== -1 ? -2 : 0) + lifestyleScore(a, tags);
+    const sb = b.dl + spicyScore(b.spicy || 0, tn) + (favs.indexOf(b.main) !== -1 ? -2 : 0) + lifestyleScore(b, tags);
     return sa - sb;
   });
   const best = candidates[0] || null;
@@ -125,4 +160,4 @@ const PREP_STEPS = [
   { t: '2:00', task: '煮水煮蛋 6 枚，冷藏（5 天内吃完）' }
 ];
 
-module.exports = { generateWeekMenu: generateWeekMenu, PURCHASE_LIST: PURCHASE_LIST, PREP_STEPS: PREP_STEPS };
+module.exports = { generateWeekMenu: generateWeekMenu, PURCHASE_LIST: PURCHASE_LIST, PREP_STEPS: PREP_STEPS, lifestyleScore: lifestyleScore, cookTimeMin: cookTimeMin };

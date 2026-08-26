@@ -212,6 +212,12 @@ async function suggestList() {
   } catch (e) { console.warn('suggestList 失败', e); return []; }
 }
 
+async function suggestDelete(id) {
+  if (!wx.cloud) return { ok: false, err: '云不可用' };
+  try { return await callFamily({ action: 'suggestDelete', id: id }); }
+  catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+
 async function hydrateTodayCheckins() {
   if (!ready()) return;
   try {
@@ -255,7 +261,7 @@ function requestRemind() {
 module.exports = {
   ENV: ENV, TEMPLATE_ID: TEMPLATE_ID, familyCode: familyCode, myGender: myGender, init: init,
   login: login, createFamily: createFamily, joinFamily: joinFamily, setRelation: setRelation, setGender: setGender, setName: setName, setAvatar: setAvatar, setNickname: setNickname, leaveFamily: leaveFamily, familyInfo: familyInfo, mergeProfile: mergeProfile,
-  pullHome: pullHome, pushHome: pushHome, suggestAdd: suggestAdd, suggestList: suggestList,
+  pullHome: pullHome, pushHome: pushHome, suggestAdd: suggestAdd, suggestList: suggestList, suggestDelete: suggestDelete,
   markFridgeLocalChange: markFridgeLocalChange, fridgeVersion: fridgeVersion, fridgeSyncClean: fridgeSyncClean,
   fridgeChangedSince: fridgeChangedSince, pushFridge: pushFridge,
   hydrateTodayCheckins: hydrateTodayCheckins, pushCheckin: pushCheckin, requestRemind: requestRemind

@@ -222,5 +222,19 @@ exports.main = async (event) => {
     return { ok: true, data: list };
   }
 
+  if (action === 'suggestDelete') {
+    const { id } = event;
+    if (!id) return { ok: false, err: '缺少建议 id' };
+    const fam = await myFamily(OPENID);
+    // 允许删除：本人提交的 或 家庭创建者（管理）
+    const doc = await db.collection('suggestions').doc(id).get().catch(function () { return null; });
+    if (!doc || !doc.data) return { ok: false, err: '建议不存在' };
+    const s = doc.data;
+    const can = s.openid === OPENID || (fam && fam.creator === OPENID);
+    if (!can) return { ok: false, err: '无权删除该建议' };
+    await db.collection('suggestions').doc(id).remove();
+    return { ok: true };
+  }
+
   return { ok: false, err: '未知 action' };
 };

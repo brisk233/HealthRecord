@@ -6,7 +6,7 @@ page {
   --bg: #F4FAF7;
   --card: #FFFFFF;
   --text: #22322B;
-  --sub: #8AA39A;
+  --sub: #7A8B82;
   --warn: #FFA940;
   --danger: #FF7A70;
   --pink: #FF8FA3;
@@ -15,6 +15,9 @@ page {
   color: var(--text);
   font-family: -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', sans-serif;
 }
+/* 统一清除原生 button 残留边框（G2） */
+button::after { border: none; }
+
 .page { padding: 24rpx 24rpx 100rpx; }
 .card {
   background: var(--card);
@@ -39,6 +42,13 @@ page {
 .seg-item.on { background: #FFF; color: var(--brand-deep); box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.12); }
 .row { display: flex; align-items: center; justify-content: space-between; padding: 14rpx 0; border-bottom: 1rpx solid #F0F6F3; }
 .row:last-child { border-bottom: none; }
+/* 可点击行按压反馈（G1） */
+.row-hover { background: #F0F6F3; }
+.meal-hover { background: #F0F6F3; }
+.chip:active { transform: scale(0.94); }
+.major:active { transform: scale(0.97); }
+.seg-item:active { transform: scale(0.96); }
+.link-btn:active { opacity: 0.6; }
 .muted { color: var(--sub); font-size: 24rpx; margin-top: 6rpx; }
 .tag { font-size: 22rpx; padding: 6rpx 16rpx; border-radius: 999rpx; background: var(--brand-soft); color: var(--brand-deep); font-weight: 600; }
 .tag.warn { background: #FFF3E2; color: #C97B0E; }
@@ -50,11 +60,11 @@ page {
 .meal-body { flex: 1; }
 .input { border: 2rpx solid #E4EFEA; border-radius: 18rpx; padding: 16rpx 20rpx; margin-bottom: 16rpx; background: #FAFDFB; text-align: center; }
 .btn-primary, .btn-ghost {
-  display: block;
-  width: auto;
+  display: table !important;
+  width: auto !important;
   min-width: 220rpx;
-  margin: 20rpx auto 0;
-  padding: 14rpx 44rpx;
+  margin: 20rpx auto 0 !important;
+  padding: 14rpx 44rpx !important;
   text-align: center;
   font-size: 28rpx;
   line-height: 1.5;
@@ -70,9 +80,19 @@ page {
   box-shadow: 0 6rpx 18rpx rgba(47, 178, 135, 0.3);
 }
 .btn-ghost { background: #FFF; color: var(--brand-deep); border: 2rpx solid var(--brand); }
-.btn-sm { display: inline-block; width: auto; margin: 0; padding: 8rpx 24rpx; font-size: 24rpx; min-width: 0; letter-spacing: 0; line-height: 1.5; border-radius: 12rpx; }
+/* 危险操作按钮（G6）：红字红边 ghost */
+.btn-danger { background: #FFF; color: #C23B3B; border: 2rpx solid #C23B3B; }
+.btn-danger.btn-sm { min-width: 0; padding: 8rpx 24rpx; }
+/* 删除小圆钮：56rpx 热区（P1） */
+.btn-x { display: inline-block; min-width: 0 !important; width: 56rpx; height: 56rpx; line-height: 56rpx; margin: 0; padding: 0; border-radius: 50%; background: #FFEDEC; color: #C23B3B; font-size: 26rpx; border: none; text-align: center; }
+/* 禁用态（O1） */
+.btn-primary[disabled], .btn-ghost[disabled], .btn-danger[disabled] { opacity: 0.55; box-shadow: none; }
+.btn-primary[disabled] { background: #A8CFC0; }
+/* 文字按钮（M3） */
+.link-btn { color: var(--brand-deep); font-size: 24rpx; font-weight: 700; padding: 8rpx 4rpx; flex-shrink: 0; border-bottom: 2rpx solid var(--brand); }
+.btn-sm { display: inline-block; width: auto !important; margin: 0; padding: 8rpx 24rpx; font-size: 24rpx; min-width: 0; letter-spacing: 0; line-height: 1.5; border-radius: 12rpx; }
 .family-name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 32rpx; letter-spacing: 2rpx; }
-.btn-add-fav { flex-shrink: 0; width: 150rpx; min-width: 0; max-width: 150rpx; height: 76rpx; line-height: 76rpx; padding: 0; margin: 0 0 0 12rpx; border-radius: 14rpx; background: var(--grad); color: #FFF; font-size: 26rpx; font-weight: 600; border: none; box-shadow: 0 6rpx 18rpx rgba(47, 178, 135, 0.3); text-align: center; }
+.btn-add-fav { flex-shrink: 0; width: 150rpx !important; min-width: 0; max-width: 150rpx; height: 76rpx; line-height: 76rpx; padding: 0; margin: 0 0 0 12rpx; border-radius: 14rpx; background: var(--grad); color: #FFF; font-size: 26rpx; font-weight: 600; border: none; box-shadow: 0 6rpx 18rpx rgba(47, 178, 135, 0.3); text-align: center; }
 .btn-add-fav::after { border: none; }
 .fav-item { position: relative; display: inline-block; margin: 0 16rpx 16rpx 0; }
 .fav-x { display: inline-block; width: 40rpx; height: 40rpx; line-height: 40rpx; margin-left: 10rpx; text-align: center; border-radius: 50%; background: #FF7A70; color: #FFF; font-size: 24rpx; vertical-align: middle; }
@@ -98,8 +118,8 @@ page {
 .avatar-btn-lg::after { border: none; }
 .avatar-img-lg { width: 128rpx; height: 128rpx; border-radius: 50%; }
 .avatar-cam { position: absolute; right: -4rpx; bottom: -4rpx; width: 40rpx; height: 40rpx; border-radius: 50%; background: #FFF; display: flex; align-items: center; justify-content: center; font-size: 22rpx; box-shadow: none; border: 2rpx solid #EFF6F2; }
-.chip { padding: 12rpx 28rpx; border-radius: 999rpx; background: #EFF6F2; color: #5A6B62; margin: 0 12rpx 12rpx 0; font-size: 26rpx; font-weight: 600; display: inline-block; }
-.major { position: relative; width: 30%; box-sizing: border-box; background: #FFF; border: 2rpx solid #E4EFEA; border-radius: 24rpx; padding: 20rpx 10rpx 16rpx; text-align: center; margin: 0 3.3% 20rpx 0; }
+.chip { padding: 12rpx 28rpx; border-radius: 999rpx; background: #EFF6F2; color: #5A6B62; margin: 0 12rpx 12rpx 0; font-size: 26rpx; font-weight: 600; display: inline-block; transition: transform .12s; }
+.major { position: relative; width: 30%; box-sizing: border-box; background: #FFF; border: 2rpx solid #E4EFEA; border-radius: 24rpx; padding: 20rpx 10rpx 16rpx; text-align: center; margin: 0 3.3% 20rpx 0; transition: transform .12s; }
 .major.on { background: #E7F7F0; border: 3rpx solid #2FB287; box-shadow: 0 6rpx 16rpx rgba(47, 178, 135, 0.18); }
 .major-check { position: absolute; top: -14rpx; right: -14rpx; width: 40rpx; height: 40rpx; line-height: 40rpx; text-align: center; background: var(--grad); color: #FFF; border-radius: 50%; font-size: 24rpx; }
 .chip.on { background: var(--grad); color: #FFF; box-shadow: 0 4rpx 12rpx rgba(47, 178, 135, 0.3); }
@@ -111,3 +131,24 @@ page {
 .seg-item-light { padding: 8rpx 28rpx; border-radius: 999rpx; color: #7A8B82; font-weight: 600; }
 .seg-item-light.on { background: var(--grad); color: #FFF; }
 .drag-handle { padding: 8rpx 20rpx 8rpx 4rpx; color: #C3CBC7; font-size: 34rpx; line-height: 1; flex-shrink: 0; }
+/* 临期/过期卡片视觉（C4）：左侧色条 + 微底纹 */
+.card-warn { border-left: 10rpx solid var(--warn); background: #FFFCF6; }
+.card-danger { border-left: 10rpx solid var(--danger); background: #FFF8F7; }
+/* 折叠展开动画（P5） */
+.panel { animation: slideDown .22s ease; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10rpx); } to { opacity: 1; transform: translateY(0); } }
+/* 时间/文本输入行（作息与喜好）：等宽后置、统一居中、行高对齐 */
+.time-input { width: 300rpx; margin: 0 !important; text-align: center; height: 68rpx; line-height: 68rpx; padding: 0 16rpx; font-size: 26rpx; box-sizing: border-box; }
+/* 树形食材选择入口（冰箱入库） */
+.tp-input { color: var(--brand-deep); font-weight: 600; font-size: 28rpx; }
+.tp-input-arrow { color: #B9C7C0; font-weight: 400; }
+/* 自动分析提示条（冰箱入库自动推断分类/保质期/位置） */
+.auto-hint { background: var(--brand-soft); border-radius: 14rpx; padding: 12rpx 20rpx; margin-bottom: 16rpx; font-size: 24rpx; color: var(--brand-deep); font-weight: 600; }
+/* 自绘勾选（M2）：比原生 checkbox 热区大、整行可点 */
+.cb { width: 48rpx; height: 48rpx; border-radius: 50%; border: 3rpx solid #C9DED5; background: #FFF; display: flex; align-items: center; justify-content: center; font-size: 28rpx; color: #FFF; flex-shrink: 0; transition: all .15s; }
+.cb.on { background: var(--grad); border-color: var(--brand); }
+/* 引导页：已选满 3 个时，未选人格变灰（O2） */
+.major-locked { opacity: 0.45; filter: grayscale(0.6); }
+/* 今日页引导提示条（T3） */
+.banner { display: flex; align-items: center; justify-content: space-between; background: #FFF7E8; border: 2rpx solid #FFE3B5; border-radius: 20rpx; padding: 20rpx 24rpx; margin-bottom: 24rpx; color: #8A5A0B; font-size: 26rpx; }
+.banner-btn { color: #C97B0E; font-weight: 700; flex-shrink: 0; margin-left: 16rpx; }

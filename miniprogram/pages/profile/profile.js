@@ -3,7 +3,7 @@ const date = require('../../utils/date.js');
 const nutrition = require('../../utils/nutrition.js');
 const cloudsync = require('../../utils/cloudsync.js');
 const lifestyle = require('../../data/lifestyle.js');
-const MEAL_LABELS = { menu: '按菜单', home: '在家做', takeout: '外卖', party: '聚餐', out: '外食', skip: '没吃' };
+const MEAL_LABELS = { menu: '按菜单', home: '在家做', canteen: '食堂', takeout: '外卖', party: '聚餐', out: '外食', skip: '没吃' };
 
 Page({
   data: {
@@ -111,12 +111,20 @@ Page({
     return list;
   },
   loadFamily() {
+    const that = this;
     cloudsync.familyInfo().then(function (info) {
       if (info) {
         if (info.myNickname && !wx.getStorageSync('nickname')) wx.setStorageSync('nickname', info.myNickname);
         if (info.myAvatarUrl && !wx.getStorageSync('myAvatarUrl')) wx.setStorageSync('myAvatarUrl', info.myAvatarUrl);
         const idx = this.data.relations.indexOf(info.myRelation);
         const members = (info.members || []).map(function (m) { return Object.assign({}, m, { avatarErr: false }); });
+        // P7：成员变多时提示另一半已加入（只在 1→2 时提醒一次）
+        const prevCount = this._memberCount;
+        const newCount = (info.members || []).length;
+        if (prevCount !== undefined && newCount > prevCount && newCount > 1) {
+          wx.showToast({ title: '🎉 你的另一半已加入家庭', icon: 'none' });
+        }
+        this._memberCount = newCount;
         this.setData({ family: Object.assign({}, info, { members: members }), myRelation: info.myRelation, myRole: info.myRole || '', myRelationIdx: idx >= 0 ? idx : 2, familyName: info.name || '我们的家' });
       } else { this.setData({ family: null }); }
       this.refresh();
@@ -204,9 +212,8 @@ Page({
     const person = app.globalData.profile[cloudsync.myGender()];
     person.height = Number(this.data.form.height) || person.height;
     person.weight = Number(this.data.form.weight) || person.weight;
-    this.setData({ baseOpen: false });
     this.saveProfile();
-    wx.showToast({ title: '已保存', icon: 'success' });
+    wx.showToast({ title: '已保存 ✓', icon: 'success' });
   },
   // ===== 补剂 ======
   onSuppEnabled(e) { app.globalData.profile[cloudsync.myGender()].suppEnabled = e.detail.value; this.saveProfile(); },
@@ -223,17 +230,43 @@ Page({
   },
   delSupp(e) {
     const key = e.currentTarget.dataset.key;
+    const that = this;
     const person = app.globalData.profile[cloudsync.myGender()];
-    person.supps = person.supps.filter(function (s) { return s.key !== key; });
-    this.saveProfile();
+    const target = person.supps.find(function (s) { return s.key === key; });
+    if (!target) return;
+    wx.showModal({
+      title: '删除补剂',
+      content: '确定删除「' + target.name + '」？历史打卡记录不受影响。',
+      confirmText: '删除', confirmColor: '#C23B3B',
+      success: function (res) {
+        if (!res.confirm) return;
+        const p = app.globalData.profile[cloudsync.myGender()];
+        p.supps = p.supps.filter(function (s) { return s.key !== key; });
+        that.saveProfile();
+        wx.showToast({ title: '已删除', icon: 'none' });
+      }
+    });
   },
   // ===== 习惯 ======
   goOnboarding() { wx.navigateTo({ url: '/pages/onboarding/onboarding' }); },
   delHabit(e) {
     const key = e.currentTarget.dataset.key;
+    const that = this;
     const person = app.globalData.profile[cloudsync.myGender()];
-    person.habits = person.habits.filter(function (h) { return h.key !== key; });
-    this.saveProfile();
+    const target = person.habits.find(function (h) { return h.key === key; });
+    if (!target) return;
+    wx.showModal({
+      title: '删除习惯',
+      content: '确定删除「' + target.name + '」？历史打卡记录不受影响。',
+      confirmText: '删除', confirmColor: '#C23B3B',
+      success: function (res) {
+        if (!res.confirm) return;
+        const p = app.globalData.profile[cloudsync.myGender()];
+        p.habits = p.habits.filter(function (h) { return h.key !== key; });
+        that.saveProfile();
+        wx.showToast({ title: '已删除', icon: 'none' });
+      }
+    });
   },
   addHabitFromTemplate(e) {
     const person = app.globalData.profile[cloudsync.myGender()];
@@ -307,8 +340,16 @@ Page({
     return m;
   },
   // ===== 作息与喜好 ======
-  onWorkBlur(e) { app.globalData.profile[cloudsync.myGender()].work = e.detail.value; this.saveProfile(); },
-  onSleepBlur(e) { app.globalData.profile[cloudsync.myGender()].sleep = e.detail.value; this.saveProfile(); },
+  onWorkBlur(e) {
+    app.globalData.profile[cloudsync.myGender()].work = e.detail.value;
+    this.saveProfile();
+    wx.showToast({ title: '已保存', icon: 'none', duration: 800 });
+  },
+  onSleepBlur(e) {
+    app.globalData.profile[cloudsync.myGender()].sleep = e.detail.value;
+    this.saveProfile();
+    wx.showToast({ title: '已保存', icon: 'none', duration: 800 });
+  },
   onTasteLevel(e) { app.globalData.profile[cloudsync.myGender()].tasteLevel = this.data.tasteLevels[Number(e.detail.value)]; this.saveProfile(); },
   onFavToggle(e) {
     const v = e.currentTarget.dataset.v;
@@ -356,6 +397,61 @@ Page({
     wx.showToast({ title: '已清空全部喜好', icon: 'none' });
   },
   onFavNew(e) { this.setData({ favNew: e.detail.value }); },
+  // 树选择：展开式多选，已选的食材回显打勾；确认后批量加入
+  openFavTree() {
+    const tp = this.selectComponent('#favtp');
+    if (!tp) return;
+    const person = app.globalData.profile[cloudsync.myGender()];
+    tp.open({ title: '选择喜欢的食材（点已选可取消）', mode: 'multi', chosen: person.favs || [] });
+  },
+  // 全量同步语义：勾选=加入、取消=移除（只动树里的食材，手输自定义不动）
+  onFavTreeConfirm(e) {
+    const chosen = (e.detail && e.detail.chosen) || [];
+    const person = app.globalData.profile[cloudsync.myGender()];
+    if (!Array.isArray(person.favs)) person.favs = [];
+    if (!Array.isArray(person.favHidden)) person.favHidden = [];
+    // 树里全部食材名（用于判断哪些是「可取消」的）
+    const treeNames = {};
+    (require('../../data/foodtree.js') || []).forEach(function (l1) {
+      (l1.children || []).forEach(function (l2) {
+        (l2.items || []).forEach(function (it) { treeNames[it.name] = true; });
+      });
+    });
+    let added = 0, removed = 0;
+    // 勾选：加入（并清 favHidden）
+    chosen.forEach(function (v) {
+      const hi = person.favHidden.indexOf(v);
+      if (hi !== -1) person.favHidden.splice(hi, 1);
+      if (person.favs.indexOf(v) === -1) { person.favs.push(v); added++; }
+    });
+    // 取消：已选但未勾选、且是树里食材 → 移除
+    person.favs = person.favs.filter(function (v) {
+      if (treeNames[v] && chosen.indexOf(v) === -1) { removed++; return false; }
+      return true;
+    });
+    this.saveProfile();
+    this.refresh();
+    const msg = [];
+    if (added) msg.push('添加 ' + added + ' 种');
+    if (removed) msg.push('取消 ' + removed + ' 种');
+    this.setData({ favLast: msg.join('，') || '未变化' });
+    wx.showToast({ title: msg.join('，') || '未变化', icon: 'none' });
+  },
+  _addFavByName(v) {
+    const person = app.globalData.profile[cloudsync.myGender()];
+    if (!Array.isArray(person.favs)) person.favs = [];
+    if (!Array.isArray(person.favHidden)) person.favHidden = [];
+    const hi = person.favHidden.indexOf(v);
+    if (hi !== -1) person.favHidden.splice(hi, 1);
+    if (person.favs.indexOf(v) === -1) {
+      person.favs.push(v);
+      this.saveProfile();
+      this.setData({ favLast: '已添加「' + v + '」' });
+      wx.showToast({ title: '已添加「' + v + '」', icon: 'none' });
+    } else {
+      wx.showToast({ title: '「' + v + '」已在列表中', icon: 'none' });
+    }
+  },
   addFav() {
     const v = String(this.data.favNew || '').trim();
     if (!v) { wx.showToast({ title: '先输入食材名', icon: 'none' }); return; }
@@ -446,6 +542,15 @@ Page({
   // ===== 使用建议 ======
   goSuggest() { wx.navigateTo({ url: '/pages/suggest/suggest' }); },
   goSuggestions() { wx.navigateTo({ url: '/pages/suggestions/suggestions' }); },
+  // ===== 关于 ======
+  showAbout() {
+    wx.showModal({
+      title: '欢洋生活 v' + this.data.version,
+      content: '家人共同的饮食/运动/习惯助手。\n\n数据默认存本机，登录后可多设备同步；如需查看隐私保护指引，可在小程序「设置 → 隐私设置」中查看。',
+      showCancel: false, confirmText: '知道了'
+    });
+  },
+  openPrivacy() { if (wx.openPrivacyContract) wx.openPrivacyContract({}); },
   // ===== 折叠与提醒 ======
   toggleLog() { this.setData({ logOpen: !this.data.logOpen }); },
   toggleBase() { this.setData({ baseOpen: !this.data.baseOpen }); },
