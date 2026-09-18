@@ -215,6 +215,17 @@
   </view>
 
   <view class="card">
+    <view class="card-title">💰 记账本</view>
+    <view class="row" bindtap="goBills"><text>🧾 家庭记账 · 明细/统计</text><text class="muted" style="margin:0;">›</text></view>
+    <view class="row" bindtap="goImport"><text>📷 账单截图导入</text><text class="muted" style="margin:0;">自动识别 ›</text></view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">🔮 掌中决</view>
+    <view class="row" bindtap="goZzj"><text>🎯 帮我做个决定</text><text class="muted" style="margin:0;">拿不定主意的时候 ›</text></view>
+  </view>
+
+  <view class="card">
     <view class="card-title">💡 使用建议</view>
     <view class="row" bindtap="goSuggest"><text>✍️ 提交建议</text><text class="muted" style="margin:0;">支持图片 ›</text></view>
     <view class="row" bindtap="goSuggestions"><text>📋 查看建议</text><text class="muted" style="margin:0;">使用者反馈 ›</text></view>

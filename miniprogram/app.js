@@ -3,7 +3,7 @@ const cloudsync = require('./utils/cloudsync.js');
 
 App({
   globalData: {
-    version: '2.5.0',
+    version: '2.5.5',
     env: cloudsync.ENV,
     profile: null,
     fridge: []

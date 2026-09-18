@@ -540,8 +540,11 @@ Page({
     return { title: '加入我们的「欢洋生活」小家庭 🏠', path: '/pages/profile/profile?code=' + code };
   },
   // ===== 使用建议 ======
+  goBills() { wx.navigateTo({ url: '/pages/bills/bills' }); },
+  goImport() { wx.navigateTo({ url: '/pages/bills/import' }); },
   goSuggest() { wx.navigateTo({ url: '/pages/suggest/suggest' }); },
   goSuggestions() { wx.navigateTo({ url: '/pages/suggestions/suggestions' }); },
+  goZzj() { wx.navigateTo({ url: '/pages/zzj/zzj' }); },
   // ===== 关于 ======
   showAbout() {
     wx.showModal({

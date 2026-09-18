@@ -8,7 +8,13 @@
     "pages/profile/profile",
     "pages/prep/prep",
     "pages/suggest/suggest",
-    "pages/suggestions/suggestions"
+    "pages/suggestions/suggestions",
+    "pages/bills/bills",
+    "pages/bills/import",
+    "pages/zzj/zzj",
+    "pages/zzj/knowledge",
+    "pages/zzj/lost",
+    "pages/zzj/future"
   ],
   "window": {
     "navigationBarBackgroundColor": "#2FB287",

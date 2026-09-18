@@ -47,6 +47,9 @@ Page({
   },
   goFamily() { wx.switchTab({ url: '/pages/profile/profile' }); },
   goGuide() { wx.navigateTo({ url: '/pages/onboarding/onboarding' }); },
+  goBills() { wx.navigateTo({ url: '/pages/bills/bills' }); },
+  //「今天听谁的」入口：进掌中决场景列表，让用户自己选（不再预设「今天吃什么」）
+  goZzj() { wx.navigateTo({ url: '/pages/zzj/zzj' }); },
   refresh() {
     const profile = app.globalData.profile;
     const me = cloudsync.myGender();
@@ -137,6 +140,7 @@ Page({
     this.setData({ mealSheet: { show: true, k: k, list: list } });
   },
   closeMealSheet() { this.setData({ 'mealSheet.show': false }); },
+  noop() {},
   pickMeal(e) {
     const k = this.data.mealSheet.k;
     const v = e.currentTarget.dataset.v;

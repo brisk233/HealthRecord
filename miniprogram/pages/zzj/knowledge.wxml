@@ -1,0 +1,46 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <view class="hero">
+    <view class="date">六宫小识</view>
+    <view class="sub">这套东西从哪来</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">来历</view>
+    <view class="kn-text">{{intro}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">掌诀位置</view>
+    <view class="palm-ref">
+      <view class="palm-ref-cell" wx:for="{{palaces}}" wx:key="key">
+        <view class="palm-ref-dot">
+          <view class="palm-ref-tone">{{item.tone}}</view>
+          <view class="palm-ref-trad">{{item.trad}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="kn-note">食指 / 中指 / 无名指，各分指根与指尖，按 稳 → 缠 → 快 → 争 → 合 → 空 顺时针循环。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">六宫一览</view>
+    <view class="kn-row" wx:for="{{palaces}}" wx:key="key">
+      <view class="kn-head">
+        <text class="kn-tone">{{item.tone}}</text>
+        <text class="kn-trad">{{item.trad}}</text>
+      </view>
+      <view class="kn-attrs">{{item.element}} · {{item.dir}} · {{item.color}} · {{item.god}}</view>
+      <view class="kn-nums">数：{{item.nums}}</view>
+      <view class="kn-tagline">{{item.tagline}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">关于本工具</view>
+    <view class="kn-text">我们只取六宫的情境含义，帮你把几个选项定下来。
+这里不做好坏判断，也不谈以后会怎样。
+
+抽取结果是随机的。它的作用是给你一个外部信号，帮你看清自己本来倾向哪个。</view>
+  </view>
+</view>

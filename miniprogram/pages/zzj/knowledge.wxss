@@ -1,0 +1,16 @@
+/* 六宫小识 */
+.kn-text { font-size: 27rpx; line-height: 1.8; color: var(--text); white-space: pre-wrap; }
+.kn-note { font-size: 23rpx; color: var(--sub); line-height: 1.7; margin-top: 20rpx; }
+.palm-ref { display: flex; flex-wrap: wrap; width: 100%; }
+.palm-ref-cell { width: 33.333%; padding: 10rpx; box-sizing: border-box; }
+.palm-ref-dot { background: var(--brand-soft); border-radius: 20rpx; padding: 20rpx 6rpx; text-align: center; }
+.palm-ref-tone { font-size: 34rpx; font-weight: 800; color: var(--brand-deep); line-height: 1.1; }
+.palm-ref-trad { font-size: 20rpx; color: var(--sub); margin-top: 4rpx; }
+.kn-row { padding: 22rpx 0; border-bottom: 1rpx solid #F0F6F3; }
+.kn-row:last-child { border-bottom: none; }
+.kn-head { display: flex; align-items: baseline; }
+.kn-tone { font-size: 34rpx; font-weight: 800; color: var(--brand-deep); margin-right: 14rpx; }
+.kn-trad { font-size: 24rpx; color: var(--sub); }
+.kn-attrs { font-size: 24rpx; color: var(--sub); margin-top: 8rpx; }
+.kn-nums { font-size: 24rpx; color: var(--sub); margin-top: 4rpx; }
+.kn-tagline { font-size: 27rpx; font-weight: 600; margin-top: 10rpx; color: var(--text); }

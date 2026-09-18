@@ -10,6 +10,8 @@ const seed = require(mp('data/seed.js'));
 const ex = require(mp('data/exercises.js'));
 const lifestyle = require(mp('data/lifestyle.js'));
 const cloudsync = require(mp('utils/cloudsync.js'));
+const zzj = require(mp('data/zhangzhongjue.js'));
+const zzjExt = require(mp('data/zzj-ext.js'));
 
 let pass = 0, fail = 0;
 const testQueue = [];
@@ -853,6 +855,143 @@ t('食材树选择器：点选后渲染源 curL1 同步勾选、可移除、单�
   if (inst.data.chosen.length !== 1 || inst.data.chosen[0] !== '吊龙') throw new Error('单选应只留最后一项: ' + inst.data.chosen.join('/'));
 });
 
+t('账单OCR解析引擎：用用户真实截图跑出的腾讯云OCR文本（2026-08 账单）', function () {
+  const bp = require(path.join(__dirname, '..', 'cloudfunctions', 'family', 'billparse.js'));
+  // === 用户真实截图 → 腾讯云 OCR 实际输出（逐行原文，分行布局） ===
+  const real = [
+    '11:07', '5G 5G76', '5G', 'X', '账单', '全部账单', '查找交易', '收支统计>',
+    '2026年8月', '支出￥6036.09收入￥6979.18',
+    '我心飞翔', '-6.00', '8月27日 09:12',
+    '亲属卡交易-Aa好老婆爱老婆..', '-0.10', '8月26日 10:49',
+    '扫二维码付款-给城邦梅子', '-4.00', '8月26日 09:02',
+    '淘', '淘宝平台商户', '-3.50', '8月25日 17:53', '7.00', '￥',
+    '零钱提现-到长沙银行(0215)', '3.11', '8月25日 17:53', '￥',
+    '零钱充值-来自招商银行(2472)', '3.00', '8月25日 17:53',
+    '转账-转给我屋里菜好呷', '-18.00', '8月24日 11:54',
+    '小包', '湘小包', '-5.50', '8月24日 09:08'
+  ].join('\n');
+  const r = bp.parseBillText(real);
+  if (r.length !== 8) throw new Error('真实OCR应识别8笔，实际 ' + r.length + ': ' + JSON.stringify(r));
+  if (r[0].merchant !== '我心飞翔' || r[0].amount !== 6 || r[0].date.indexOf('08-27') === -1 || r[0].type !== 'expense') throw new Error('第1笔: ' + JSON.stringify(r[0]));
+  if (r[1].merchant !== '亲属卡交易-Aa好老婆爱老婆..' || r[1].date.indexOf('08-26') === -1) throw new Error('第2笔: ' + JSON.stringify(r[1]));
+  if (r[2].merchant !== '扫二维码付款-给城邦梅子' || r[2].date.indexOf('08-26') === -1) throw new Error('第3笔: ' + JSON.stringify(r[2]));
+  if (r[3].merchant !== '淘宝平台商户' || r[3].amount !== 3.5 || r[3].date.indexOf('08-25') === -1) throw new Error('第4笔: ' + JSON.stringify(r[3]));
+  if (r[4].type !== 'income' || r[4].amount !== 3.11 || r[4].date.indexOf('08-25') === -1) throw new Error('提现应判收入: ' + JSON.stringify(r[4]));
+  if (r[5].type !== 'income' || r[5].amount !== 3) throw new Error('充值应判收入: ' + JSON.stringify(r[5]));
+  if (r[7].merchant !== '湘小包' || r[7].amount !== 5.5 || r[7].date.indexOf('08-24') === -1) throw new Error('第8笔: ' + JSON.stringify(r[7]));
+  // 列表式：¥金额+商户同行
+  let r1 = bp.parseBillText(['微信支付账单', '2026年8月26日 12:30', '美团平台商户 ¥38.50', '深圳沃尔玛超市 ¥120.40'].join('\n'));
+  if (r1.length !== 2) throw new Error('列表式应2笔，实际 ' + r1.length);
+  // 去重
+  let r3 = bp.parseBillText(['美团平台商户 ¥38.50', '2026年8月26日', '美团平台商户 ¥38.50', '2026年8月26日'].join('\n'));
+  if (r3.length !== 1) throw new Error('去重失败: ' + r3.length);
+});
+
+t('账单OCR解析引擎：支付宝真实截图OCR输出（含同行金额/无空格今天昨天/噪声行）', function () {
+  const bp = require(path.join(__dirname, '..', 'cloudfunctions', 'family', 'billparse.js'));
+  // 用户支付宝截图 → 腾讯云OCR 真实输出（逐行原文）
+  const alipay = [
+    '11:28','5G 5G74','5G','L','搜索交易记录','搜索','全部','支出','转账','退款','订单','筛选▼','8月▼','心','我的消费图鉴)','支出','收入','今年累计已省','￥171','￥680,39','￥475.00','本月已省 1.20元>','收支分析','限时福利','这笔账单已经报销了','报销详情','codex过验登陆手机过验问题解决','4.89','m','2026-08-03 12:38:13','已报销1.30元','余额宝-收益发放','0.13','投资理财','今天02:50',' ','蚂蚁财富-永赢高端装备智选混合C...421.04','投资理财','昨天15:24','余额宝-收益发放','0.13','投资理财','昨天02:00','余额宝-收益发放','0.12','投资理财','开启通知，交易信息不错过','开启','X'
+  ].join('\n');
+  // 今天/昨天按「运行当天」换算：parseBillText 以真实当前日期解析，
+  // 断言必须动态计算。原实现写死 08-27/08-26，是随真实日期推进而必然失败的
+  // 时间炸弹（2026-09-18 起复现），非解析器缺陷。
+  const pad2 = function (n) { return String(n).padStart(2, '0'); };
+  const mdOf = function (dt) { return pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate()); };
+  const _now = new Date();
+  const TODAY_MD = mdOf(_now);
+  const YESTERDAY_MD = mdOf(new Date(_now.getTime() - 86400000));
+  const out = bp.parseBillText(alipay);
+  if (out.length !== 5) throw new Error('支付宝应5笔，实际 ' + out.length + ': ' + JSON.stringify(out));
+  if (out[0].merchant.indexOf('codex') === -1 || out[0].amount !== 4.89 || out[0].date !== '2026-08-03' || out[0].type !== 'expense') throw new Error('第1笔: ' + JSON.stringify(out[0]));
+  if (out[1].merchant.indexOf('余额宝') === -1 || out[1].amount !== 0.13 || out[1].type !== 'income') throw new Error('余额宝收益: ' + JSON.stringify(out[1]));
+  if (out[2].merchant.indexOf('蚂蚁财富') === -1 || out[2].amount !== 421.04 || out[2].type !== 'expense') throw new Error('蚂蚁财富同行金额: ' + JSON.stringify(out[2]));
+  if (out[3].merchant.indexOf('余额宝') === -1 || out[3].amount !== 0.13 || out[3].type !== 'income') throw new Error('余额宝昨天: ' + JSON.stringify(out[3]));
+  if (out[4].merchant.indexOf('余额宝') === -1 || out[4].amount !== 0.12 || out[4].type !== 'income') throw new Error('余额宝今天: ' + JSON.stringify(out[4]));
+  // 2026-08-03 用完整日期；今天/昨天按运行当天动态换算
+  if (out[1].date.indexOf(TODAY_MD) === -1) throw new Error('今天日期转换错误: ' + out[1].date + '，期望含 ' + TODAY_MD);
+  if (out[2].date.indexOf(YESTERDAY_MD) === -1) throw new Error('昨天日期转换错误: ' + out[2].date + '，期望含 ' + YESTERDAY_MD);
+  // 汇总噪声（680,39/475.00/已报销等）不得作为账单
+  if (out.some(function (b) { return b.merchant.indexOf('报销') !== -1 || b.merchant.indexOf('支出') !== -1; })) throw new Error('噪声行被识别为账单');
+});
+
+t('记账模块全自动：添加→列表→修改→删除 全链路（内存云端模拟 + 真实bills页面）', function () {
+  // 内存版云端：模拟 family bills 集合（含 _id）
+  const DB = {};
+  let autoId = 0;
+  function cloud(db) {
+    return {
+      callFunction: function (opt) {
+        const d = opt.data || {};
+        const action = d.action;
+        if (action === 'billAdd') {
+          if (!d.date || !(Number(d.money) > 0)) return Promise.resolve({ result: { ok: false, err: '缺少日期或金额' } });
+          const id = 'bid' + (++autoId);
+          DB[id] = { _id: id, date: d.date, amount: Math.round(Number(d.money) * 100), type: d.type || 'expense', category: d.category || 'food', note: d.note || '', merchant: d.merchant || '', person: d.person || 'male', createdAt: Date.now(), updatedAt: Date.now() };
+          return Promise.resolve({ result: { ok: true } });
+        }
+        if (action === 'billList') {
+          const from = d.from || '', to = d.to || '';
+          const list = Object.keys(DB).map(function (k) { return DB[k]; }).filter(function (b) { return (!from || b.date >= from) && (!to || b.date <= to); }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+          return Promise.resolve({ result: { ok: true, data: list } });
+        }
+        if (action === 'billDel') {
+          if (!d.id) return Promise.resolve({ result: { ok: false, err: '缺少账单 id' } });
+          const found = DB[d.id];
+          if (!found) return Promise.resolve({ result: { ok: false, err: '账单不存在' } });
+          delete DB[d.id];
+          return Promise.resolve({ result: { ok: true } });
+        }
+        if (action === 'billUpdate') {
+          if (!d.id || !d.patch) return Promise.resolve({ result: { ok: false, err: '参数缺失' } });
+          if (DB[d.id]) { DB[d.id].note = d.patch.note !== undefined ? d.patch.note : DB[d.id].note; DB[d.id].updatedAt = Date.now(); return Promise.resolve({ result: { ok: true } }); }
+          return Promise.resolve({ result: { ok: false, err: '账单不存在' } });
+        }
+        return Promise.resolve({ result: {} });
+      }
+    };
+  }
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  global.wx.cloud = cloud();
+  const getCfg = capturePage();
+  loadPage('pages/bills/bills.js');
+  const page = makePage(getCfg(), ['onLoad', 'loadMonth', 'save', 'editNote', 'goImport']);
+  page.onLoad();
+  page.setData({ money: '25.5', type: 'expense', category: 'food', note: '午饭', person: 'male' });
+  page.save();
+  return new Promise(function (res, rej) {
+    setTimeout(function () {
+      try {
+        // 保存后列表应有 1 笔（loadMonth 是异步的，save 成功但 loadMonth 需再触发）
+        page.loadMonth();
+        setTimeout(function () {
+          try {
+            if (page.data.bills.length !== 1) throw new Error('保存后列表应为1笔，实际 ' + page.data.bills.length);
+            const bid = page.data.bills[0].id;
+            if (!bid) throw new Error('账单缺少 id 字段（_id 未规范化）——删除将不生效');
+            // 真实 UI 路径：actionSheet 选「删除这笔」(tapIndex=1) → modal 确认
+            global.wx.showActionSheet = function (opt) { if (opt.success) opt.success({ tapIndex: 1 }); };
+            global.wx.showModal = function (opt) { if (opt.success) opt.success({ confirm: true }); };
+            page.editNote({ currentTarget: { dataset: { id: bid } } });
+            setTimeout(function () {
+              try {
+                page.loadMonth();
+                setTimeout(function () {
+                  try {
+                    if (page.data.bills.length !== 0) throw new Error('删除后列表应为0，实际 ' + page.data.bills.length + '（删除不生效!!）');
+                    res();
+                  } catch (e) { rej(e); }
+                }, 20);
+              } catch (e) { rej(e); }
+            }, 20);
+          } catch (e) { rej(e); }
+        }, 20);
+      } catch (e) { rej(e); }
+    }, 20);
+  });
+});
+
 t('WXML 扫描：全量模板禁止 indexOf 方法调用', function () {
   const fs = require('fs');
   const walk = function (dir) {
@@ -873,6 +1012,341 @@ t('WXML 扫描：全量模板禁止 indexOf 方法调用', function () {
     });
   };
   walk(path.join(__dirname, '..', 'miniprogram'));
+});
+
+console.log('');
+console.log('== 掌中决 ==');
+t('六宫数据完整且 key 唯一', function () {
+  eq(zzj.PALACES.length, 6);
+  eq(new Set(zzj.PALACES.map(function (p) { return p.key; })).size, 6);
+  zzj.PALACES.forEach(function (p) {
+    if (!p.trad || !p.tone || !p.tagline || !p.why || !p.next) throw new Error(p.key + ' 字段缺失');
+  });
+});
+
+t('报数抽取：依次传递（流派①）', function () {
+  eq(zzj.pickByNumbers(1, 1, 1).result, 0);
+  eq(zzj.pickByNumbers(7, 1, 1).first, 0);
+  eq(zzj.pickByNumbers(6, 1, 1).first, 5);
+  eq(zzj.pickByNumbers(3, 1, 1).first, 2);
+  eq(zzj.pickByNumbers(3, 1, 1).second, 2);
+});
+
+t('报数抽取：余数为 0 与负数边界', function () {
+  eq(zzj.pickByNumbers(6, 6, 6).first, 5);
+  const r = zzj.pickByNumbers(-5, -5, -5);
+  eq(r.result >= 0 && r.result < 6, true, '负数越界');
+});
+
+t('报数抽取：六个落宫都能取到', function () {
+  const seen = {};
+  for (let i = 1; i <= 6; i++) seen[zzj.pickByNumbers(i, 1, 1).first] = 1;
+  eq(Object.keys(seen).length, 6);
+});
+
+t('传统月日时算法：《玉匣记》例「三月初五辰时」→ 小吉', function () {
+  const r = zzj.byLunarDate(3, 5, 5);       // 子=1 … 辰=5
+  eq(r.month, 2, '月宫应为速喜');
+  eq(r.day, 0, '日宫应为大安');
+  eq(r.hour, 4, '时宫应为小吉');
+  eq(zzj.palace(r.hour).trad, '小吉');
+});
+
+t('防回归：错误写法「(月+日+时) mod 6，余0当6」结果不同', function () {
+  const rem = (3 + 5 + 5) % 6;                       // 13 % 6 = 1
+  const wrongIdx = rem === 0 ? 5 : rem - 1;          // 1-1 = 0 => 大安
+  eq(wrongIdx, 0);
+  eq(zzj.byLunarDate(3, 5, 5).hour, 4);
+  if (wrongIdx === zzj.byLunarDate(3, 5, 5).hour) throw new Error('两种写法不应等价');
+});
+
+t('pickRandom 落宫合法（50 次）', function () {
+  for (let i = 0; i < 50; i++) {
+    const r = zzj.pickRandom();
+    eq(r.result >= 0 && r.result < 6, true, '越界');
+  }
+});
+
+t('buildResult 六宫字段可直接渲染', function () {
+  for (let i = 0; i < 6; i++) {
+    const r = zzj.buildResult(i);
+    if (!r.tone || !r.trad || !r.why || !r.next || !r.disclaimer) throw new Error(i + ' 缺字段');
+  }
+});
+
+t('扩展·寻物：六宫字段齐全', function () {
+  for (let i = 0; i < 6; i++) {
+    const d = zzjExt.lostOf(i);
+    if (!d.dir || !d.timing || !d.verse || !d.read) throw new Error(i + ' 缺字段');
+  }
+});
+
+t('扩展·走向：三宫结构正确', function () {
+  const f = zzjExt.futureOf(0, 2, 4);
+  eq(f.stages.length, 3);
+  eq(f.stages[0].name, '起');
+  eq(f.stages[1].name, '中');
+  eq(f.stages[2].name, '果');
+  eq(f.stages[2].tone, '合');
+  if (!f.timing) throw new Error('缺应期');
+});
+
+t('扩展·互动解读：4 个关注点 × 全部落宫组合结构完整', function () {
+  const READ = require(mp('data/zzj-read.js'));
+  eq(READ.FOCUS.length, 4, '关注点数量');
+  const focuses = READ.FOCUS.map(function (f) { return f.key; });
+  for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) for (let c = 0; c < 6; c++) {
+    focuses.forEach(function (fk) {
+      const r = READ.buildReading({ first: a, second: b, result: c }, fk, '要不要接这个新项目');
+      const tag = a + '/' + b + '/' + c + ' ' + fk;
+      if (!r.headline) throw new Error('缺结论 ' + tag);
+      if (r.layers.length !== 3) throw new Error('层数错误 ' + tag);
+      if (r.layers[0].name !== '起' || r.layers[1].name !== '中' || r.layers[2].name !== '果') throw new Error('层顺序错误 ' + tag);
+      if (r.layers[2].tone !== zzj.palace(c).tone) throw new Error('结果层与落宫不符 ' + tag);
+      r.layers.forEach(function (l) {
+        if (!l.plain || !l.hint || !l.trad) throw new Error('层文案缺失 ' + tag);
+      });
+      if (r.actions.length !== 3 || r.actions.some(function (x) { return !x; })) throw new Error('行动建议不完整 ' + tag);
+      if (r.followups.length !== 4) throw new Error('追问数量应为 4 ' + tag);
+      r.followups.forEach(function (f) {
+        if (!f.q || !f.a) throw new Error('追问问答缺失 ' + tag);
+      });
+      if (!r.timing || !r.closing) throw new Error('应期/收尾缺失 ' + tag);
+      if (r.focus.key !== fk) throw new Error('关注点回显错误 ' + tag);
+    });
+  }
+});
+
+t('扩展·互动解读：默认只展开第一层，其余需逐层点开', function () {
+  const READ = require(mp('data/zzj-read.js'));
+  const r = READ.buildReading({ first: 3, second: 1, result: 4 }, 'result', 'q');
+  eq(r.layers[0].open, true, '首层应默认展开');
+  eq(r.layers[1].open, false);
+  eq(r.layers[2].open, false);
+  r.followups.forEach(function (f) { eq(f.open, false, '追问默认收起'); });
+});
+
+t('扩展·互动解读：关注点不同 → 结论不同，关注点会回显', function () {
+  const READ = require(mp('data/zzj-read.js'));
+  const pick = { first: 0, second: 2, result: 4 };
+  const headlines = READ.FOCUS.map(function (f) { return READ.buildReading(pick, f.key, 'q').headline; });
+  if (new Set(headlines).size !== 4) throw new Error('不同关注点应给出不同结论');
+});
+
+t('扩展·走向页：落宫→选关注点→逐层展开→追问（模拟点击）', function () {
+  const profile0 = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile0);
+  const cfg0 = capturePage();
+  loadPage('pages/zzj/future.js');
+  const p0 = makePage(cfg0(), ['onLoad', 'onInput', 'roll', 'animate', 'skipAnim', 'askFocus', 'clearTimers']);
+  p0.onLoad();
+  p0.setData({ question: '要不要接这个新项目' });
+  p0.roll(); // 点击「帮我看看」
+  if (!p0.data.isDrawing || p0.data.isIdle) throw new Error('点「帮我看看」后应进入落宫动画');
+  if (!p0.data.palms.length) throw new Error('掌诀图未渲染');
+  p0.skipAnim(); // 点任意位置跳过
+  if (!p0.data.isFocus) throw new Error('跳过后应进入关注点选择');
+  p0.clearTimers();
+
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/zzj/future.js');
+  const page = makePage(getCfg(), ['onLoad', 'onInput', 'roll', 'skipAnim', 'askFocus', 'pickFocus', 'toggleLayer', 'nextLayer', 'toggleFollowup', 'again']);
+  page.onLoad();
+  page.setData({ question: '要不要接这个新项目' });
+  page.pick = { first: 0, second: 2, result: 4 };
+  page.askFocus(page.pick);
+  if (!page.data.isFocus || page.data.hasResult) throw new Error('落宫后应先进入关注点选择');
+  if (!page.data.focusList.length) throw new Error('关注点列表为空');
+
+  page.pickFocus({ currentTarget: { dataset: { k: 'action' } } });
+  if (!page.data.hasResult || page.data.isFocus) throw new Error('选完关注点应直接出解读');
+  const r = page.data.result;
+  if (r.layers.length !== 3) throw new Error('三层缺失');
+  if (!r.layers[0].open || r.layers[1].open || r.layers[2].open) throw new Error('默认只应展开第一层');
+  if (!page.data.hasMoreLayer) throw new Error('应标记仍有未展开层');
+  if (r.actions.length !== 3) throw new Error('行动建议缺失');
+
+  page.nextLayer();
+  if (!page.data.result.layers[1].open) throw new Error('第二层未展开');
+  page.nextLayer();
+  if (!page.data.result.layers[2].open) throw new Error('第三层未展开');
+  if (page.data.hasMoreLayer) throw new Error('全部展开后不应再标记未展开');
+
+  page.toggleFollowup({ currentTarget: { dataset: { i: 1 } } });
+  if (!page.data.result.followups[1].open) throw new Error('追问未展开');
+  if (!page.data.result.followups[1].a) throw new Error('追问答案缺失');
+  page.toggleFollowup({ currentTarget: { dataset: { i: 1 } } });
+  if (page.data.result.followups[1].open) throw new Error('追问收起未生效');
+
+  page.toggleLayer({ currentTarget: { dataset: { i: 0 } } });
+  if (page.data.result.layers[0].open) throw new Error('层收起未生效');
+
+  page.again();
+  if (!page.data.isIdle || page.data.result) throw new Error('重来未复位');
+});
+
+t('核心模块无 TIER2 禁词（预测/运势等）', function () {
+  const fs = require('fs');
+  const src = fs.readFileSync(mp('data/zhangzhongjue.js'), 'utf8');
+  ['预测', '预言', '运势', '应验'].forEach(function (w) {
+    if (src.indexOf(w) !== -1) throw new Error('核心模块出现禁词「' + w + '」');
+  });
+});
+
+t('掌中决：落宫帧序列落点全部正确（6×6×6 组合）', function () {
+  for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) for (let c = 0; c < 6; c++) {
+    const frames = zzj.buildFrames({ first: a, second: b, result: c });
+    if (frames[frames.length - 1].idx !== c) throw new Error('落点错误 first=' + a + ' second=' + b + ' result=' + c);
+    if (frames.length < 18) throw new Error('帧数过少: ' + frames.length);
+  }
+});
+
+t('掌中决：落宫三段标签完整', function () {
+  const frames = zzj.buildFrames({ first: 3, second: 1, result: 5 });
+  const labels = frames.map(function (f) { return f.label; });
+  if (labels.indexOf('数第一数…') === -1) throw new Error('缺第一段标签');
+  if (labels.indexOf('数第二数…') === -1) throw new Error('缺第二段标签');
+  eq(labels[labels.length - 1], '落宫…', '末帧应为落宫');
+});
+
+t('掌中决：掌诀图 6 格且高亮唯一', function () {
+  eq(zzj.palmGrid(-1).length, 6);
+  eq(zzj.palmGrid(-1).filter(function (p) { return p.on; }).length, 0);
+  for (let i = 0; i < 6; i++) {
+    const g = zzj.palmGrid(i);
+    const on = g.filter(function (p) { return p.on; });
+    eq(on.length, 1, '第 ' + i + ' 宫高亮数');
+    eq(on[0].idx, i);
+  }
+});
+
+t('掌中决：场景表含「今天吃什么」', function () {
+  eq(zzj.SCENES.length, 5);
+  if (!zzj.SCENES.some(function (s) { return s.key === 'eat'; })) throw new Error('缺 eat 场景');
+});
+
+t('掌中决：输入态「＋ 再加一个」可用（回归：死按钮）', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/zzj/zzj.js');
+  const page = makePage(getCfg(), ['onLoad', 'pickSceneByKey', 'addOption', 'onOption', 'currentOptions', 'backToScene']);
+  page.onLoad();
+  // 「其他」场景没有预置选项 → 手输模式
+  page.pickSceneByKey(zzj.SCENES[4]);
+  eq(page.data.mode, 'manual', '自定义场景应进入手输模式');
+  eq(page.data.options.length, 2, '默认应给 2 个输入框');
+  eq(page.data.canAdd, true, '2 个时应还能再加一个');
+  page.addOption();
+  eq(page.data.options.length, 3, '点「＋ 再加一个」应真的加出第 3 个');
+  eq(page.data.canAdd, false, '到上限后应隐藏按钮，避免点了没反应');
+  page.addOption();
+  eq(page.data.options.length, 3, '到上限后不应再变化');
+  page.backToScene();
+  eq(page.data.options.length, 2, '换场景后应重置为 2 个输入框');
+  eq(page.data.canAdd, true);
+});
+
+t('掌中决：预置选项可直接点选，不用输入', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/zzj/zzj.js');
+  const page = makePage(getCfg(), ['onLoad', 'pickSceneByKey', 'togglePreset', 'switchManual', 'switchPreset', 'currentOptions', 'roll', 'doRoll', 'clearTimers', 'backToScene']);
+  page.onLoad();
+  page.pickSceneByKey(zzj.SCENES[0]); // 今天吃什么
+  eq(page.data.mode, 'preset', '有预置选项的场景应默认进入直选模式');
+  if (page.data.presets.length < 4) throw new Error('预置选项过少：' + page.data.presets.length);
+  if (!page.data.presets.every(function (p) { return p.label && p.on === false; })) throw new Error('预置项初始状态错误');
+
+  page.togglePreset({ currentTarget: { dataset: { idx: 0 } } });
+  eq(page.data.selCount, 1, '选中 1 个');
+  eq(page.data.rollReady, false, '只选 1 个时「帮我选」应置灰');
+  page.togglePreset({ currentTarget: { dataset: { idx: 1 } } });
+  eq(page.data.selCount, 2, '选中 2 个');
+  eq(page.data.rollReady, true, '选满 2 个应可抽取');
+
+  const picked = page.currentOptions();
+  eq(picked.length, 2, '当前选项应为已点选的 2 个');
+  if (page.data.presets[0].label !== picked[0]) throw new Error('选项内容与所选不一致');
+
+  // 上限：最多 3 个
+  page.togglePreset({ currentTarget: { dataset: { idx: 2 } } });
+  page.togglePreset({ currentTarget: { dataset: { idx: 3 } } });
+  if (page.data.selCount > 3) throw new Error('超过 3 个未被拦住');
+
+  // 取消选择
+  page.togglePreset({ currentTarget: { dataset: { idx: 0 } } });
+  eq(page.data.presets[0].on, false, '再点一次应取消选中');
+
+  // 手输切换来回
+  page.switchManual();
+  eq(page.data.mode, 'manual');
+  page.switchPreset();
+  eq(page.data.mode, 'preset');
+
+  // 落宫：抽中的选项必须来自已选
+  page.pick = { first: 0, second: 2, result: 4 };
+  page.doRoll();
+  const sel = page.currentOptions();
+  if (sel.indexOf(page.pickedText) === -1) throw new Error('抽中项不在已选范围内');
+  page.clearTimers();
+});
+
+t('掌中决：预置选项表覆盖四个预设场景，文案无重复', function () {
+  ['eat', 'chore', 'trip', 'buy'].forEach(function (k) {
+    const list = (zzj.PRESETS && zzj.PRESETS[k]) || [];
+    if (list.length < 4) throw new Error(k + ' 预置选项过少');
+    if (new Set(list).size !== list.length) throw new Error(k + ' 预置选项有重复');
+  });
+  eq((zzj.PRESETS.custom || []).length, 0, '自定义场景不给预置（保留手输）');
+});
+
+t('掌中决：带 scene 参数可直接进对应场景（保持可用）', function () {
+  const profile = JSON.parse(JSON.stringify(seed.defaultProfile));
+  installMocks(profile);
+  const getCfg = capturePage();
+  loadPage('pages/zzj/zzj.js');
+  const page = makePage(getCfg(), ['onLoad', 'pickSceneByKey', 'togglePreset', 'currentOptions']);
+  page.onLoad({ scene: 'eat' });
+  eq(page.data.isInput, true, '带 scene 参数应直接进选项页');
+  eq(page.data.sceneLabel, '今天吃什么');
+  eq(page.data.mode, 'preset', '应带出该场景的预置选项');
+  if (!page.data.presets.length) throw new Error('预置选项未带出');
+});
+
+t('掌中决：上架构建标记 EXT:BEGIN/END 成对', function () {
+  const fs = require('fs');
+  ['miniprogram/pages/zzj/zzj.js', 'miniprogram/pages/zzj/zzj.wxml'].forEach(function (p) {
+    const src = fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+    const b = (src.match(/EXT:BEGIN/g) || []).length;
+    const e = (src.match(/EXT:END/g) || []).length;
+    if (b !== e) throw new Error(p + ' EXT 标记不成对: ' + b + ' vs ' + e);
+    if (b === 0) throw new Error(p + ' 缺 EXT 标记，上架构建会漏掉扩展层');
+  });
+});
+
+t('掌中决：app.json 已注册四个页面', function () {
+  const fs = require('fs');
+  const j = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'miniprogram', 'app.json'), 'utf8'));
+  ['pages/zzj/zzj', 'pages/zzj/knowledge', 'pages/zzj/lost', 'pages/zzj/future'].forEach(function (p) {
+    if (j.pages.indexOf(p) === -1) throw new Error('未注册 ' + p);
+  });
+});
+
+t('掌中决：入口方法存在（我的页 / 今日页）', function () {
+  const fs = require('fs');
+  const prof = fs.readFileSync(path.join(__dirname, '..', 'miniprogram', 'pages', 'profile', 'profile.js'), 'utf8');
+  const today = fs.readFileSync(path.join(__dirname, '..', 'miniprogram', 'pages', 'today', 'today.js'), 'utf8');
+  const todayWxml = fs.readFileSync(path.join(__dirname, '..', 'miniprogram', 'pages', 'today', 'today.wxml'), 'utf8');
+  if (prof.indexOf('goZzj(') === -1) throw new Error('profile.js 缺 goZzj');
+  if (today.indexOf('goZzj(') === -1) throw new Error('today.js 缺 goZzj');
+  // 今日页入口应进掌中决场景列表，让用户自己选场景（不预设「今天吃什么」）
+  if (today.indexOf('scene=eat') !== -1) throw new Error('今日页入口不应再预设 eat 场景');
+  if (today.indexOf("url: '/pages/zzj/zzj'") === -1) throw new Error('今日页入口未指向掌中决主页');
+  if (todayWxml.indexOf('bindtap="goZzj"') === -1) throw new Error('今日页卡片未绑定 goZzj');
 });
 
 console.log('');

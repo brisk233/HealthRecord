@@ -5,6 +5,16 @@
     <text class="banner-btn">去完善 ›</text>
   </view>
 
+  <view class="card" bindtap="goBills" hover-class="row-hover" style="padding:20rpx 24rpx;display:flex;align-items:center;justify-content:space-between;">
+    <text style="font-weight:700;font-size:28rpx;">💰 记账本</text>
+    <text class="muted" style="margin:0;">记一笔 · 截图导入 · 资金流向 ›</text>
+  </view>
+
+  <view class="card" bindtap="goZzj" hover-class="row-hover" style="padding:20rpx 24rpx;display:flex;align-items:center;justify-content:space-between;">
+    <text style="font-weight:700;font-size:28rpx;">🔮 今天听谁的</text>
+    <text class="muted" style="margin:0;">吃什么 · 谁做家务 · 纠结时用 ›</text>
+  </view>
+
   <view class="hero" bindtap="goFamily">
     <view>
       <view class="date">{{dateText}}</view>
@@ -72,5 +82,17 @@
     <view class="row"><text style="font-weight:600;">{{train.title}}</text><text class="tag">{{train.time}}</text></view>
     <view class="muted">{{train.detail}}</view>
     <button class="btn-primary {{train.checked?'btn-ghost':''}}" hover-class="btn-hover" bindtap="trainCheck">{{train.checked ? '✅ 已打卡 · 点此取消' : '✅ 打卡'}}</button>
+  </view>
+</view>
+
+<!-- 三餐打卡选择弹层（食堂等7项，超出 showActionSheet 6项上限） -->
+<view class="sheet-mask" wx:if="{{mealSheet.show}}" bindtap="closeMealSheet">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-title">🍽️ 这顿吃什么？</view>
+    <view class="sheet-item" wx:for="{{mealSheet.list}}" wx:key="k" bindtap="pickMeal" data-v="{{item.k}}">
+      <text>{{item.label}}</text>
+      <text class="sheet-check" wx:if="{{meals[mealSheet.k] === item.k}}">✓</text>
+    </view>
+    <view class="sheet-cancel" bindtap="closeMealSheet">取消</view>
   </view>
 </view>

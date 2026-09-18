@@ -1,0 +1,55 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <block wx:if="{{isIdle}}">
+    <view class="ext-hero">
+      <view class="t">寻物</view>
+      <view class="s">东西丢了，看看方位和时机</view>
+    </view>
+    <view class="card">
+      <view class="ext-label">丢了什么？（可不填）</view>
+      <input class="ext-input" placeholder="例如：耳机" value="{{item}}" bindinput="onInput" maxlength="20"/>
+    </view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="roll">帮我找</button>
+  </block>
+
+  <view wx:if="{{isDrawing}}" class="draw-wrap" bindtap="skipAnim">
+    <view class="ext-grid" style="width:560rpx;">
+      <view class="ext-cell" wx:for="{{palms}}" wx:key="idx">
+        <view class="ext-dot {{item.on ? 'on' : ''}}">
+          <view class="tt">{{item.tone}}</view>
+          <view class="tr">{{item.trad}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="draw-label" style="color:#4A5AB8;">{{animLabel}}</view>
+    <view class="draw-skip">点击任意位置跳过</view>
+  </view>
+
+  <block wx:if="{{hasResult}}">
+    <view class="ext-hero">
+      <view class="t">{{result.tone}} · {{result.trad}}</view>
+      <view class="s">{{item}}</view>
+    </view>
+    <view class="ext-card">
+      <view class="ext-kv">
+        <view class="ext-k">方位</view>
+        <view class="ext-v">{{result.dir}} <text class="ext-alt" wx:if="{{result.dirAlt}}">（{{result.dirAlt}}）</text></view>
+      </view>
+      <view class="ext-kv">
+        <view class="ext-k">应期</view>
+        <view class="ext-v">{{result.timing}}</view>
+      </view>
+    </view>
+    <view class="ext-card">
+      <view class="ext-label">口诀</view>
+      <view class="ext-verse">{{result.verse}}</view>
+    </view>
+    <view class="ext-card">
+      <view class="ext-label">怎么找</view>
+      <view class="ext-read">{{result.read}}</view>
+    </view>
+    <view class="ext-warn">⚠️ 传统术数内容，仅供参考，请勿用于重要决策。</view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="again">再找一次</button>
+    <button class="btn-ghost" hover-class="btn-hover" bindtap="again">‹ 换一件</button>
+  </block>
+</view>

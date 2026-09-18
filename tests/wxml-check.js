@@ -1,19 +1,18 @@
 // wxml 标签配对校验 v3（正确处理属性值中的 < > 与自闭合标签）
 const fs = require("fs");
 const path = require("path");
-const files = [
-  "miniprogram/pages/today/today.wxml",
-  "miniprogram/pages/meals/meals.wxml",
-  "miniprogram/pages/prep/prep.wxml",
-  "miniprogram/pages/fitness/fitness.wxml",
-  "miniprogram/pages/fridge/fridge.wxml",
-  "miniprogram/pages/profile/profile.wxml",
-  "miniprogram/pages/onboarding/onboarding.wxml",
-  "miniprogram/pages/suggest/suggest.wxml",
-  "miniprogram/pages/suggestions/suggestions.wxml",
-  "miniprogram/components/privacy-popup/privacy-popup.wxml",
-  "miniprogram/components/tree-picker/tree-picker.wxml"
-];
+// 自动发现全部 wxml —— 新增页面无需手动登记，避免漏检
+// （旧版为硬编码清单，曾漏掉 pages/bills/*.wxml 与 pages/zzj/*.wxml）
+function walk(dir, out) {
+  fs.readdirSync(dir).forEach(function (name) {
+    if (name === "node_modules" || name === "miniprogram_npm") return;
+    const full = path.join(dir, name);
+    const st = fs.statSync(full);
+    if (st.isDirectory()) walk(full, out);
+    else if (/\.wxml$/.test(name)) out.push(full);
+  });
+  return out;
+}
 function validate(file) {
   const src = fs.readFileSync(file, "utf8");
   const stack = [];
@@ -56,9 +55,10 @@ function validate(file) {
 }
 let allOk = true;
 const root = path.join(__dirname, "..");
+const files = walk(path.join(root, "miniprogram"), []);
 for (const f of files) {
-  const res = validate(path.join(root, f));
-  console.log(f + " => " + res);
+  const res = validate(f);
+  console.log(path.relative(root, f).split(path.sep).join("/") + " => " + res);
   if (res !== "OK") allOk = false;
 }
-console.log(allOk ? "ALL BALANCED" : "HAS ERRORS");
+console.log(allOk ? ("ALL BALANCED（" + files.length + " 个 wxml）") : "HAS ERRORS");

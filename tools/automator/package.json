@@ -1,0 +1,9 @@
+{
+  "name": "zzj-automator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "掌中决 · 微信开发者工具自动化验证（QA 铁律第 8 条）",
+  "dependencies": {
+    "miniprogram-automator": "^0.12.1"
+  }
+}

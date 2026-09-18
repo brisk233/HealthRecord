@@ -1,0 +1,101 @@
+/* 掌中决 */
+
+/* ── 场景卡 ── */
+.scene-grid { display: flex; flex-wrap: wrap; margin: 0 -8rpx; }
+.scene-item {
+  width: calc(50% - 16rpx); margin: 8rpx; padding: 28rpx 20rpx;
+  background: #F4FAF7; border-radius: 24rpx; text-align: center;
+  border: 2rpx solid #E4EFEA; box-sizing: border-box;
+}
+.scene-item:active { transform: scale(0.97); background: #E7F7F0; }
+.scene-icon { font-size: 46rpx; line-height: 1.2; }
+.scene-label { font-size: 27rpx; font-weight: 600; margin-top: 10rpx; color: var(--text); }
+
+/* ── 选项输入 ── */
+.opt-row { display: flex; align-items: center; margin-bottom: 16rpx; }
+
+/* ── 预置选项：直接点选 ── */
+.opt-chips { display: flex; flex-wrap: wrap; margin-top: 16rpx; }
+.opt-chip {
+  padding: 18rpx 28rpx; border-radius: 20rpx; margin: 0 16rpx 16rpx 0;
+  background: #F4FAF7; border: 2rpx solid #E4EFEA; color: #22322B;
+  font-size: 28rpx; font-weight: 600;
+}
+.opt-chip.on {
+  background: linear-gradient(135deg, #5FD8AC 0%, #2FB287 100%);
+  border-color: #2FB287; color: #FFF;
+  box-shadow: 0 6rpx 16rpx rgba(47,178,135,0.28);
+}
+.opt-switch {
+  text-align: center; font-size: 25rpx; color: #4A5AB8; font-weight: 600;
+  padding: 20rpx 0 4rpx;
+}
+.opt-no {
+  width: 52rpx; height: 52rpx; line-height: 52rpx; text-align: center; flex-shrink: 0;
+  background: var(--brand-soft); color: var(--brand-deep); border-radius: 50%;
+  font-size: 26rpx; font-weight: 700; margin-right: 16rpx;
+}
+.opt-input {
+  flex: 1; border: 2rpx solid #E4EFEA; border-radius: 18rpx;
+  padding: 16rpx 20rpx; background: #FAFDFB; font-size: 28rpx;
+}
+.shake-tip { text-align: center; font-size: 24rpx; color: var(--sub); margin-top: 20rpx; }
+.list-note { font-size: 24rpx; color: var(--sub); margin-bottom: 20rpx; }
+
+/* ── 落宫动画 ── */
+.draw-wrap {
+  min-height: 78vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 40rpx 24rpx;
+}
+.palm { display: flex; flex-wrap: wrap; width: 560rpx; margin: 0 auto; }
+.palm-cell { width: 33.333%; padding: 14rpx; box-sizing: border-box; }
+.palm-dot {
+  border-radius: 24rpx; padding: 22rpx 8rpx; text-align: center;
+  background: #FFFFFF; border: 3rpx solid #E4EFEA;
+  transition: all .12s ease-out;
+}
+.palm-dot.on {
+  background: var(--grad); border-color: var(--brand-deep);
+  box-shadow: 0 10rpx 26rpx rgba(47,178,135,0.42);
+  transform: scale(1.09);
+}
+.palm-tone { font-size: 38rpx; font-weight: 800; color: var(--text); line-height: 1.1; }
+.palm-trad { font-size: 21rpx; color: var(--sub); margin-top: 4rpx; }
+.palm-dot.on .palm-tone, .palm-dot.on .palm-trad { color: #FFFFFF; }
+.draw-label { margin-top: 56rpx; font-size: 30rpx; font-weight: 600; color: var(--brand-deep); letter-spacing: 2rpx; }
+.draw-skip { margin-top: 18rpx; font-size: 23rpx; color: var(--sub); }
+
+/* ── 结果 ── */
+.res-hero {
+  background: var(--grad); border-radius: 32rpx; padding: 44rpx 32rpx;
+  text-align: center; color: #FFF; margin-bottom: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(47,178,135,0.25);
+}
+.res-tone { font-size: 52rpx; font-weight: 800; letter-spacing: 4rpx; }
+.res-tagline { font-size: 26rpx; opacity: 0.92; margin-top: 12rpx; }
+.sec-label { font-size: 24rpx; color: var(--sub); font-weight: 600; margin-bottom: 14rpx; letter-spacing: 1rpx; }
+.picked-box {
+  font-size: 40rpx; font-weight: 800; text-align: center; padding: 26rpx 20rpx;
+  background: var(--brand-soft); color: var(--brand-deep); border-radius: 22rpx;
+}
+.why-text { font-size: 28rpx; line-height: 1.75; color: var(--text); }
+.next-card { background: #FFFDF6; border: 2rpx solid #FFE9B8; }
+.next-text { font-size: 30rpx; line-height: 1.7; font-weight: 600; color: #8A6A16; }
+.disclaimer { font-size: 22rpx; color: var(--sub); line-height: 1.6; text-align: center; margin: 4rpx 24rpx 20rpx; }
+
+/* 结果页小掌诀图 */
+.palm-anchor { margin-top: 8rpx; }
+.palm-mini { display: flex; flex-wrap: wrap; width: 340rpx; margin: 0 auto; opacity: 0.85; }
+.palm-mini .palm-cell { padding: 6rpx; }
+.palm-dot.mini { padding: 12rpx 6rpx; border-radius: 16rpx; }
+.palm-dot.mini .palm-tone { font-size: 26rpx; }
+
+/* ── 历史 ── */
+.hist-row { padding: 18rpx 0; border-bottom: 1rpx solid #F0F6F3; }
+.hist-row:last-child { border-bottom: none; }
+.hist-line { display: flex; align-items: center; justify-content: space-between; }
+.hist-tone { font-size: 28rpx; font-weight: 700; color: var(--brand-deep); }
+.hist-done { font-size: 22rpx; color: var(--brand-deep); background: var(--brand-soft); padding: 4rpx 14rpx; border-radius: 999rpx; }
+.hist-sub { font-size: 23rpx; color: var(--sub); margin-top: 6rpx; }
+.hist-empty { font-size: 25rpx; color: var(--sub); text-align: center; padding: 24rpx 0; }
+.ext-note { font-size: 22rpx; color: var(--sub); margin-top: 16rpx; text-align: center; line-height: 1.6; }

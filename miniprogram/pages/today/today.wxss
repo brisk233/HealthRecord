@@ -1,1 +1,11 @@
 /* pages/today/today.wxss */
+/* 三餐打卡选择弹层 */
+.sheet-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 9999; display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: #FFF; border-radius: 32rpx 32rpx 0 0; padding: 28rpx 28rpx calc(env(safe-area-inset-bottom) + 20rpx); box-sizing: border-box; animation: sheetUp .22s ease; }
+.sheet-title { font-size: 32rpx; font-weight: 700; text-align: center; margin-bottom: 12rpx; }
+.sheet-item { display: flex; align-items: center; justify-content: space-between; padding: 26rpx 24rpx; border-radius: 16rpx; border-bottom: 1rpx solid #F0F6F3; font-size: 28rpx; }
+.sheet-item:active { background: #F0F6F3; }
+.sheet-item:last-of-type { border-bottom: none; }
+.sheet-check { color: var(--brand); font-weight: 800; font-size: 32rpx; }
+.sheet-cancel { margin-top: 16rpx; text-align: center; padding: 20rpx 0; background: #F0F3F1; border-radius: 16rpx; color: #5A6B62; font-size: 28rpx; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }

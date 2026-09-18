@@ -13,3 +13,8 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+cloudbaserc.json
+
+# 上架构建备份（tools/build-publish.js 生成）
+.publish-backup/
+

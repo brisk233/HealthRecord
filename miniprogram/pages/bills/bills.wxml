@@ -1,0 +1,72 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <!-- 月度总览 -->
+  <view class="hero">
+    <view style="display:flex;align-items:center;justify-content:space-between;">
+      <view class="date">{{monthLabel}}</view>
+      <view style="display:flex;">
+        <text style="padding:6rpx 20rpx;background:rgba(255,255,255,0.2);border-radius:999rpx;font-size:24rpx;margin-right:12rpx;" bindtap="prevMonth">‹ 上月</text>
+        <text style="padding:6rpx 20rpx;background:rgba(255,255,255,0.2);border-radius:999rpx;font-size:24rpx;" bindtap="nextMonth">下月 ›</text>
+      </view>
+    </view>
+    <view style="display:flex;margin-top:20rpx;">
+      <view style="flex:1;">
+        <view class="sub">支出</view>
+        <view style="font-size:34rpx;font-weight:800;">¥{{expenseText}} · 收入 ¥{{incomeText}}</view>
+      </view>
+      <view style="flex:1;text-align:right;">
+        <view class="sub">结余</view>
+        <view style="font-size:34rpx;font-weight:800;">¥{{balanceText}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快速记账 -->
+  <view class="card">
+    <view class="card-title">💰 记一笔</view>
+    <view class="seg-light" style="margin-bottom:16rpx;">
+      <view class="seg-item-light {{type==='expense'?'on':''}}" bindtap="pickType" data-t="expense">💸 支出</view>
+      <view class="seg-item-light {{type==='income'?'on':''}}" bindtap="pickType" data-t="income">📥 收入</view>
+    </view>
+    <view style="display:flex;flex-wrap:wrap;">
+      <view class="chip {{category===item.key?'on':''}}" wx:for="{{catCurrent}}" wx:key="key" bindtap="pickCat" data-k="{{item.key}}">{{item.icon}} {{item.name}}</view>
+    </view>
+    <view style="display:flex;align-items:center;margin-top:8rpx;">
+      <text style="font-size:28rpx;font-weight:700;margin-right:12rpx;">¥</text>
+      <input class="input" style="flex:1;margin:0;text-align:left;font-size:34rpx;font-weight:800;" type="digit" placeholder="0.00" value="{{money}}" bindinput="onMoney"/>
+    </view>
+    <input class="input" placeholder="备注（可选），如：美团外卖" value="{{note}}" bindinput="onNote"/>
+    <view class="row" style="margin-top:8rpx;">
+      <text>记账人</text>
+      <view style="display:flex;">
+        <text class="chip {{person===item.key?'on':''}}" wx:for="{{persons}}" wx:key="key" bindtap="pickPerson" data-p="{{item.key}}">{{item.name}}</text>
+      </view>
+    </view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="save">✅ 保存</button>
+  </view>
+
+  <!-- 截图导入入口 -->
+  <view class="card" bindtap="goImport" hover-class="row-hover">
+    <view class="row">
+      <text>📷 从微信账单截图导入</text>
+      <text class="muted" style="margin:0;">自动识别金额/商户 ›</text>
+    </view>
+    <view class="list-note">微信「我的-支付-账单」截图，一次导入多笔，识别后确认用途</view>
+  </view>
+
+  <!-- 每日明细 -->
+  <view class="card">
+    <view class="card-title">📅 每日明细</view>
+    <view wx:if="{{!loading && bills.length === 0}}" class="empty"><text class="emoji">🧾</text>本月还没有记录<view class="muted">用上方「记一笔」或「截图导入」开始</view></view>
+    <block wx:for="{{bills}}" wx:key="id" wx:for-item="b">
+      <view class="row" bindtap="editNote" data-id="{{b._id}}" hover-class="row-hover">
+        <view style="flex:1;min-width:0;">
+          <text>{{b.category ? '' : ''}}{{b.type === 'income' ? '📥' : '💸'}} {{b.note || '（无备注）'}}</text>
+          <view class="muted">{{b.date}} · {{b.person === 'male' ? '他' : '她'}}</view>
+        </view>
+        <text style="font-weight:700;{{b.type==='income'?'color:#2FB287;':'color:#22322B;'}}">{{b.type==='income' ? '+' : '-'}}¥{{b.money}}</text>
+      </view>
+    </block>
+    <view class="list-note" wx:if="{{bills.length > 0}}">点任意一条可改备注或删除</view>
+  </view>
+</view>

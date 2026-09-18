@@ -1,0 +1,143 @@
+<privacy-popup id="pp" />
+<view class="page">
+
+  <!-- ═══ 状态 1 · 场景选择 ═══ -->
+  <block wx:if="{{isScene}}">
+    <view class="hero">
+      <view class="date">掌中决</view>
+      <view class="sub">拿不定主意的时候，交给六宫</view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">你在纠结什么？</view>
+      <view class="scene-grid">
+        <view class="scene-item" wx:for="{{scenes}}" wx:key="key" data-key="{{item.key}}" bindtap="pickScene" hover-class="row-hover">
+          <view class="scene-icon">{{item.icon}}</view>
+          <view class="scene-label">{{item.label}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- EXT:BEGIN -->
+    <view class="card" wx:if="{{extEntries.length}}">
+      <view class="card-title">更多</view>
+      <view class="row" wx:for="{{extEntries}}" wx:key="key" data-url="{{item.url}}" bindtap="goExt" hover-class="row-hover">
+        <text>{{item.icon}} {{item.title}}</text>
+        <text class="muted" style="margin:0;">{{item.desc}} ›</text>
+      </view>
+      <view class="ext-note">寻物 / 走向为传统术数内容，仅供自用参考</view>
+    </view>
+    <!-- EXT:END -->
+
+    <view class="card">
+      <view class="row" bindtap="goKnowledge" hover-class="row-hover">
+        <text>📖 六宫小识</text>
+        <text class="muted" style="margin:0;">这套东西从哪来 ›</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title" bindtap="toggleHistory">
+        <text>{{historyOpen ? '▾' : '▸'}} 最近记录（{{historyCount}}）</text>
+        <text class="muted" style="margin:0;">{{historyOpen ? '收起' : '展开'}}</text>
+      </view>
+      <block wx:if="{{historyOpen}}">
+        <view class="hist-empty" wx:if="{{historyCount === 0}}">还没有记录，算一次试试</view>
+        <view class="hist-row" wx:for="{{history}}" wx:key="ts">
+          <view class="hist-line">
+            <text class="hist-tone">{{item.tone}} · {{item.trad}}</text>
+            <text class="hist-done" wx:if="{{item.done}}">✅ 已定</text>
+          </view>
+          <view class="hist-sub">{{item.time}} · {{item.scene}} · {{item.picked}}</view>
+          <view class="hist-sub" wx:if="{{item.options}}">当时在纠结：{{item.options}}</view>
+        </view>
+        <button class="btn-ghost btn-sm" style="display:block;margin:16rpx auto 0;" hover-class="btn-hover" wx:if="{{historyCount > 0}}" bindtap="clearHistory">🗑️ 清空记录</button>
+      </block>
+    </view>
+  </block>
+
+  <!-- ═══ 状态 2 · 填选项 ═══ -->
+  <block wx:if="{{isInput}}">
+    <view class="card">
+      <view class="card-title">{{sceneLabel}}</view>
+
+      <!-- 预置选项：直接点选，不用输入 -->
+      <block wx:if="{{mode === 'preset'}}">
+        <view class="list-note">直接点选你正在纠结的 2 – 3 个（已选 {{selCount}}）</view>
+        <view class="opt-chips">
+          <view class="opt-chip {{item.on ? 'on' : ''}}" wx:for="{{presets}}" wx:key="label" data-idx="{{index}}" bindtap="togglePreset" hover-class="row-hover">{{item.label}}</view>
+        </view>
+        <view class="opt-switch" bindtap="switchManual">✏️ 都不合适？自己写 ›</view>
+      </block>
+
+      <!-- 手输模式 -->
+      <block wx:else>
+        <view class="list-note">写下你的选项（2 – 3 个）</view>
+        <view class="opt-row" wx:for="{{options}}" wx:key="index">
+          <view class="opt-no">{{index + 1}}</view>
+          <input class="opt-input" placeholder="选项 {{index + 1}}" value="{{item}}" data-idx="{{index}}" bindinput="onOption" maxlength="20"/>
+        </view>
+        <button class="btn-ghost btn-sm" style="display:block;margin:16rpx auto 0;" hover-class="btn-hover" wx:if="{{canAdd}}" bindtap="addOption">＋ 再加一个</button>
+        <view class="opt-switch" wx:if="{{presets.length}}" bindtap="switchPreset">‹ 回到推荐选项</view>
+      </block>
+    </view>
+
+    <button class="btn-primary" hover-class="btn-hover" bindtap="roll" disabled="{{!rollReady}}">帮我选</button>
+    <view class="shake-tip">📱 也可以摇一摇手机</view>
+    <button class="btn-ghost" hover-class="btn-hover" style="margin-top:24rpx !important;" bindtap="backToScene">‹ 换个场景</button>
+  </block>
+
+  <!-- ═══ 状态 3 · 落宫 ═══ -->
+  <view wx:if="{{isDrawing}}" class="draw-wrap" bindtap="skipAnim">
+    <view class="palm">
+      <view class="palm-cell" wx:for="{{palms}}" wx:key="idx">
+        <view class="palm-dot {{item.on ? 'on' : ''}}">
+          <view class="palm-tone">{{item.tone}}</view>
+          <view class="palm-trad">{{item.trad}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="draw-label">{{animLabel}}</view>
+    <view class="draw-skip">点击任意位置跳过</view>
+  </view>
+
+  <!-- ═══ 状态 4 · 结果 ═══ -->
+  <block wx:if="{{isResult}}">
+    <view class="res-hero">
+      <view class="res-tone">{{result.tone}} · {{result.trad}}</view>
+      <view class="res-tagline">{{result.tagline}}</view>
+    </view>
+
+    <view class="card">
+      <view class="sec-label">选择</view>
+      <view class="picked-box">{{picked}}</view>
+    </view>
+
+    <view class="card">
+      <view class="sec-label">为什么</view>
+      <view class="why-text">{{result.why}}</view>
+    </view>
+
+    <view class="card next-card">
+      <view class="sec-label">下一步</view>
+      <view class="next-text">{{result.next}}</view>
+    </view>
+
+    <view class="disclaimer">{{result.disclaimer}}</view>
+
+    <button class="btn-primary" hover-class="btn-hover" bindtap="onConfirm">就这么定了</button>
+    <button class="btn-ghost" hover-class="btn-hover" bindtap="onReroll">再来一次</button>
+    <button class="btn-ghost" hover-class="btn-hover" style="margin-top:24rpx !important;" bindtap="backToInput">‹ 改选项</button>
+  </block>
+
+  <view class="palm-anchor" wx:if="{{isResult}}">
+    <view class="palm-mini">
+      <view class="palm-cell" wx:for="{{palms}}" wx:key="idx">
+        <view class="palm-dot {{item.on ? 'on' : ''}} mini">
+          <view class="palm-tone">{{item.tone}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+</view>

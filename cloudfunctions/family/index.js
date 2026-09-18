@@ -2,6 +2,7 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
+const { parseBillText } = require('./billparse.js');
 
 // 6 位邀请码（去除易混淆字符）
 function genCode() {
@@ -17,7 +18,7 @@ async function myFamily(openid) {
 
 // 首次运行时自动创建集合（免手动建库）
 async function ensureCollections() {
-  const names = ['families', 'checkins', 'suggestions'];
+  const names = ['families', 'checkins', 'suggestions', 'bills'];
   for (const n of names) {
     try { await db.createCollection(n); } catch (e) { /* 已存在则忽略 */ }
   }
@@ -234,6 +235,114 @@ exports.main = async (event) => {
     if (!can) return { ok: false, err: '无权删除该建议' };
     await db.collection('suggestions').doc(id).remove();
     return { ok: true };
+  }
+
+  if (action === 'billAdd') {
+    // { date, money(元), type:'expense'|'income', category, note, merchant, person }
+    const { date, money, type, category, note, merchant, person } = event;
+    const amount = Number(money);
+    if (!date || !(amount > 0)) return { ok: false, err: '请填写日期和正确金额' };
+    const fam = await myFamily(OPENID);
+    const code = fam ? fam.code : ('solo_' + OPENID);
+    const doc = {
+      code: code, openid: OPENID, date: date, amount: Math.round(amount * 100),
+      type: type === 'income' ? 'income' : 'expense',
+      category: String(category || '其他').slice(0, 20),
+      note: String(note || '').slice(0, 100),
+      merchant: String(merchant || '').slice(0, 40),
+      person: person || 'male', createdAt: Date.now(), updatedAt: Date.now()
+    };
+    await db.collection('bills').add({ data: doc });
+    return { ok: true };
+  }
+
+  if (action === 'billList') {
+    // { from, to } 日期范围（含端点）
+    const { from, to } = event;
+    const fam = await myFamily(OPENID);
+    const code = fam ? fam.code : ('solo_' + OPENID);
+    const col = db.collection('bills');
+    const limit = 200;
+    let out = [];
+    let skip = 0;
+    const cond = Object.assign({ code: code }, (from && to) ? { date: _.gte(from).and(_.lte(to)) } : {});
+    const fetchPage = async function () {
+      const res = await col.where(cond).orderBy('date', 'desc').orderBy('createdAt', 'desc').skip(skip).limit(limit).get();
+      out = out.concat(res.data);
+      if (res.data.length === limit) { skip += limit; await fetchPage(); }
+    };
+    await fetchPage();
+    return { ok: true, data: out };
+  }
+
+  if (action === 'billDel') {
+    const { id } = event;
+    if (!id) return { ok: false, err: '缺少账单 id' };
+    const fam = await myFamily(OPENID);
+    const code = fam ? fam.code : ('solo_' + OPENID);
+    const doc = await db.collection('bills').doc(id).get().catch(function () { return null; });
+    if (!doc || !doc.data) return { ok: false, err: '账单不存在' };
+    if (doc.data.code !== code) return { ok: false, err: '无权删除该账单' };
+    await db.collection('bills').doc(id).remove();
+    return { ok: true };
+  }
+
+  if (action === 'billUpdate') {
+    const { id, patch } = event;
+    if (!id || !patch) return { ok: false, err: '参数缺失' };
+    const fam = await myFamily(OPENID);
+    const code = fam ? fam.code : ('solo_' + OPENID);
+    const doc = await db.collection('bills').doc(id).get().catch(function () { return null; });
+    if (!doc || !doc.data) return { ok: false, err: '账单不存在' };
+    if (doc.data.code !== code) return { ok: false, err: '无权修改该账单' };
+    const p = {};
+    if ('category' in patch) p.category = String(patch.category || '其他').slice(0, 20);
+    if ('note' in patch) p.note = String(patch.note || '').slice(0, 100);
+    if ('amount' in patch && Number(patch.amount) > 0) p.amount = Math.round(Number(patch.amount) * 100);
+    if ('type' in patch) p.type = patch.type === 'income' ? 'income' : 'expense';
+    p.updatedAt = Date.now();
+    await db.collection('bills').doc(id).update({ data: p });
+    return { ok: true };
+  }
+
+  if (action === 'billOcr') {
+    // { imageUrl } — 图片临时下载地址（客户端已上传到云存储后取临时链接）
+    const { imageUrl } = event;
+    if (!imageUrl) return { ok: false, err: '缺少图片地址' };
+    // 密钥从环境变量读取（云函数配置里设置）
+    const secretId = process.env.TENCENT_OCR_SECRET_ID;
+    const secretKey = process.env.TENCENT_OCR_SECRET_KEY;
+    if (!secretId || !secretKey) return { ok: false, err: 'OCR 未配置：请在云函数环境变量填写 TENCENT_OCR_SECRET_ID/KEY' };
+    try {
+      const tencentcloud = require('tencentcloud-sdk-nodejs');
+      const OcrClient = tencentcloud.ocr.v20181119.Client;
+      const client = new OcrClient({
+        credential: { secretId: secretId, secretKey: secretKey },
+        region: 'ap-shanghai', profile: { httpProfile: { endpoint: 'ocr.tencentcloudapi.com' } }
+      });
+      // 下载图片转 base64
+      const https = require('https');
+      const httpsGet = function (url) {
+        return new Promise(function (resolve, reject) {
+          https.get(url, function (res) {
+            if (res.statusCode !== 200) { reject(new Error('下载图片失败 ' + res.statusCode)); return; }
+            const chunks = [];
+            res.on('data', function (c) { chunks.push(c); });
+            res.on('end', function () { resolve(Buffer.concat(chunks)); });
+          }).on('error', reject);
+        });
+      };
+      const imgBuf = await httpsGet(imageUrl);
+      const base64 = imgBuf.toString('base64');
+      const resp = await client.GeneralBasicOCR({ ImageBase64: base64, LanguageType: 'zh' });
+      const text = (resp.TextDetections || []).map(function (t) { return t.DetectedText || ''; }).join('\n');
+      const candidates = parseBillText(text);
+      // 记录原始文本便于调试
+      return { ok: true, data: { candidates: candidates, rawText: text.slice(0, 2000) } };
+    } catch (e) {
+      console.error('billOcr error', e);
+      return { ok: false, err: 'OCR 识别失败：' + (e.message || e) };
+    }
   }
 
   return { ok: false, err: '未知 action' };

@@ -218,6 +218,46 @@ async function suggestDelete(id) {
   catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
 }
 
+// ===== 记账 =====
+async function billAdd(rec) {
+  if (!wx.cloud) return { ok: false, err: '云不可用' };
+  try { return await callFamily(Object.assign({ action: 'billAdd' }, rec)); }
+  catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+async function billList(from, to) {
+  if (!wx.cloud || !wx.cloud.callFunction) return [];
+  try {
+    const res = await callFamily({ action: 'billList', from: from || '', to: to || '' });
+    return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+  } catch (e) { console.warn('billList 失败', e); return []; }
+}
+async function billDel(id) {
+  if (!wx.cloud) return { ok: false, err: '云不可用' };
+  try { return await callFamily({ action: 'billDel', id: id }); }
+  catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+async function billUpdate(id, patch) {
+  if (!wx.cloud) return { ok: false, err: '云不可用' };
+  try { return await callFamily({ action: 'billUpdate', id: id, patch: patch }); }
+  catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+// 截图 OCR：上传到云存储 → 取临时链接 → 识别 → 删除云文件（不留存）
+async function billOcr(filePath) {
+  if (!wx.cloud) return { ok: false, err: '云不可用' };
+  try {
+    const openid = wx.getStorageSync('myOpenid') || 'guest';
+    const up = await wx.cloud.uploadFile({
+      cloudPath: 'bills/' + openid + '-' + Date.now() + '.jpg',
+      filePath: filePath
+    });
+    const urlRes = await wx.cloud.getTempFileURL({ fileList: [up.fileID] });
+    const url = (urlRes.fileList && urlRes.fileList[0] && urlRes.fileList[0].tempFileURL) || '';
+    const r = await callFamily({ action: 'billOcr', imageUrl: url });
+    wx.cloud.deleteFile({ fileList: [up.fileID] }).catch(function () {}); // 识别完即删
+    return r;
+  } catch (e) { return { ok: false, err: friendlyCloudErr(e) }; }
+}
+
 async function hydrateTodayCheckins() {
   if (!ready()) return;
   try {
@@ -262,6 +302,7 @@ module.exports = {
   ENV: ENV, TEMPLATE_ID: TEMPLATE_ID, familyCode: familyCode, myGender: myGender, init: init,
   login: login, createFamily: createFamily, joinFamily: joinFamily, setRelation: setRelation, setGender: setGender, setName: setName, setAvatar: setAvatar, setNickname: setNickname, leaveFamily: leaveFamily, familyInfo: familyInfo, mergeProfile: mergeProfile,
   pullHome: pullHome, pushHome: pushHome, suggestAdd: suggestAdd, suggestList: suggestList, suggestDelete: suggestDelete,
+  billAdd: billAdd, billList: billList, billDel: billDel, billUpdate: billUpdate, billOcr: billOcr,
   markFridgeLocalChange: markFridgeLocalChange, fridgeVersion: fridgeVersion, fridgeSyncClean: fridgeSyncClean,
   fridgeChangedSince: fridgeChangedSince, pushFridge: pushFridge,
   hydrateTodayCheckins: hydrateTodayCheckins, pushCheckin: pushCheckin, requestRemind: requestRemind

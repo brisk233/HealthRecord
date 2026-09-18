@@ -1,0 +1,89 @@
+<privacy-popup id="pp" />
+<view class="page">
+  <block wx:if="{{isIdle}}">
+    <view class="ext-hero">
+      <view class="t">走向</view>
+      <view class="s">一件事的起因 · 经过 · 结果</view>
+    </view>
+    <view class="card">
+      <view class="ext-label">你想问的是哪件事？</view>
+      <input class="ext-input" placeholder="例如：要不要接这个新项目" value="{{question}}" bindinput="onInput" maxlength="40"/>
+      <view class="ext-note">不要填写真实姓名、电话、地址等隐私信息；解读在本机生成，不会上传。</view>
+    </view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="roll">帮我看看</button>
+  </block>
+
+  <view wx:if="{{isDrawing}}" class="draw-wrap" bindtap="skipAnim">
+    <view class="ext-grid" style="width:560rpx;">
+      <view class="ext-cell" wx:for="{{palms}}" wx:key="idx">
+        <view class="ext-dot {{item.on ? 'on' : ''}}">
+          <view class="tt">{{item.tone}}</view>
+          <view class="tr">{{item.trad}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="draw-label" style="color:#4A5AB8;">{{animLabel}}</view>
+    <view class="draw-skip">点击任意位置跳过</view>
+  </view>
+
+  <block wx:if="{{isFocus}}">
+    <view class="ext-hero">
+      <view class="t">先问你一句</view>
+      <view class="s">{{question || '你没写具体事情，也可以继续'}}</view>
+    </view>
+    <view class="ext-card">
+      <view class="ext-label">这件事，你最想先弄清楚哪一点？</view>
+      <view class="ext-focus" wx:for="{{focusList}}" wx:key="key" data-k="{{item.key}}" bindtap="pickFocus">
+        <view class="ext-focus-t">{{item.label}}</view>
+        <view class="ext-focus-h">{{item.hint}}</view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{hasResult}}">
+    <view class="ext-hero">
+      <view class="s">{{result.question || '这件事'}}</view>
+      <view class="t">{{result.headline}}</view>
+      <view class="s">你关心的是：{{result.focus.label}}</view>
+    </view>
+
+    <view class="ext-card">
+      <view class="ext-label">这件事的来龙去脉（点一层看一层）</view>
+      <view class="ext-stage" wx:for="{{result.layers}}" wx:key="name" data-i="{{index}}" bindtap="toggleLayer">
+        <view class="ext-stage-no">{{item.name}}</view>
+        <view class="ext-stage-body">
+          <view class="ext-stage-head">{{item.tone}} · {{item.trad}}</view>
+          <block wx:if="{{item.open}}">
+            <view class="ext-stage-text">{{item.plain}}</view>
+            <view class="ext-stage-hint">{{item.hint}}</view>
+          </block>
+          <view wx:else class="ext-stage-more">点开看这一层在讲什么 ›</view>
+        </view>
+      </view>
+      <view class="ext-more" wx:if="{{hasMoreLayer}}" bindtap="nextLayer">继续展开下一层 ›</view>
+      <view class="ext-kv" style="margin-top:16rpx;">
+        <view class="ext-k">应期</view>
+        <view class="ext-v">{{result.timing}}</view>
+      </view>
+    </view>
+
+    <view class="ext-card">
+      <view class="ext-label">接下来怎么做</view>
+      <view class="ext-act" wx:for="{{result.actions}}" wx:key="*this">
+        <text class="ext-act-no">{{index + 1}}</text>{{item}}
+      </view>
+      <view class="ext-closing">{{result.closing}}</view>
+    </view>
+
+    <view class="ext-card">
+      <view class="ext-label">还想问什么（点开看回答）</view>
+      <view class="ext-fu" wx:for="{{result.followups}}" wx:key="q" data-i="{{index}}" bindtap="toggleFollowup">
+        <view class="ext-fu-q">{{item.q}}</view>
+        <view class="ext-fu-a" wx:if="{{item.open}}">{{item.a}}</view>
+      </view>
+    </view>
+
+    <view class="ext-warn">⚠️ 传统术数内容，仅供参考，请勿用于重要决策。</view>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="again">看完了，换个问题</button>
+  </block>
+</view>

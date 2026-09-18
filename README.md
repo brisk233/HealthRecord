@@ -45,3 +45,12 @@
 ### 以后每次代码更新
 - 小程序端页面/逻辑改动：点「上传」新版本号 → 后台「选为体验版」→ 手机端自动更新
 - 云函数改动：对应云函数目录右键 →「上传并部署：云端安装依赖」
+
+## 六、记账 OCR 配置（一次性）
+1. 腾讯云控制台 https://console.cloud.tencent.com/ocr → 开通「文字识别」（个人版每月1000次免费）
+2. 访问管理 → API密钥管理 → 新建密钥，得到 SecretId / SecretKey
+3. 微信开发者工具 → 云开发控制台 → 云函数 → family → 配置 → 环境变量：
+   - TENCENT_OCR_SECRET_ID = 你的 SecretId
+   - TENCENT_OCR_SECRET_KEY = 你的 SecretKey
+4. 重新部署 family（右键→上传并部署：云端安装依赖，含 tencentcloud-sdk-nodejs）
+说明：账单截图仅上传用于即时识别，识别完立即从云存储删除，不留存。
