@@ -29,6 +29,7 @@ const EXCLUDED = path.join(BACKUP, 'excluded');
 // 扩展层文件（相对项目根）：构建时移出 miniprogram/
 const EXT_FILES = [
   'miniprogram/data/zzj-ext.js',
+  'miniprogram/data/zzj-lost-read.js',
   'miniprogram/pages/zzj/ext.wxss',
   'miniprogram/pages/zzj/lost.js',
   'miniprogram/pages/zzj/lost.wxml',

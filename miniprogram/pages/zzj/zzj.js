@@ -53,7 +53,6 @@ Page({
     // EXT:BEGIN
     extEntries: [],
     // EXT:END
-    rerollHint: ''
   },
 
   onLoad(options) {

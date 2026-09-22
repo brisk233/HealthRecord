@@ -1,1 +1,8 @@
+@import "./read.wxss";
 @import "./ext.wxss";
+
+/* 寻物页主题覆写：结论条与追问用扩展层紫色 */
+.res-headline { background: linear-gradient(135deg, #6C7BD8 0%, #4A5AB8 100%); box-shadow: 0 10rpx 30rpx rgba(74,90,184,0.25); }
+.fq-qt { color: #4A5AB8; }
+.trad-name { color: #4A5AB8; }
+.trad-verse { color: #4A5AB8; }

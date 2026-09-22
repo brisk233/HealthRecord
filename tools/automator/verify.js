@@ -178,8 +178,19 @@ async function tapByText(page, sel, want) {
   const ldraw = await lp.$('.draw-wrap');
   if (ldraw) await ldraw.tap();
   await lp.waitFor(1200);
-  const lverse = await textOf(lp, '.ext-verse');
-  check('寻物结果含口诀', !!lverse && lverse.length > 4, lverse || '(空)');
+  // 寻物页现在是白话互动解读（传统依据收进折叠区）
+  const lhead = await textOf(lp, '.res-headline');
+  check('寻物白话结论打头', !!lhead && lhead.length > 6, (lhead || '').slice(0, 22) + '…');
+  const lchips = await lp.$$('.chip');
+  check('寻物关注点 4 个', lchips.length === 4, lchips.length + ' 个');
+  const llayers = await lp.$$('.layer');
+  check('寻物分层 3 层', llayers.length === 3, llayers.length + ' 层');
+  const ltradBefore = await lp.$('.trad-box');
+  check('寻物传统依据默认收起', !ltradBefore);
+  await tapByText(lp, '.row', '查看传统依据');
+  await sleep(600);
+  const lverse = await textOf(lp, '.trad-verse');
+  check('可展开传统依据含口诀', !!lverse && lverse.length > 4, lverse || '(空)');
   const lwarn = await textOf(lp, '.ext-warn');
   check('寻物页有风险提示', !!lwarn && lwarn.indexOf('仅供参考') !== -1);
   await miniProgram.screenshot({ path: path.join(SHOTS, '6-lost.png') });

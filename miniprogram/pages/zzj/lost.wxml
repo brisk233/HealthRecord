@@ -1,17 +1,21 @@
 <privacy-popup id="pp" />
 <view class="page">
+
+  <!-- ═══ 输入 ═══ -->
   <block wx:if="{{isIdle}}">
     <view class="ext-hero">
       <view class="t">寻物</view>
-      <view class="s">东西丢了，看看方位和时机</view>
+      <view class="s">东西丢了，先别急着自己翻</view>
     </view>
     <view class="card">
       <view class="ext-label">丢了什么？（可不填）</view>
       <input class="ext-input" placeholder="例如：耳机" value="{{item}}" bindinput="onInput" maxlength="20"/>
+      <view class="ext-note">不要填写真实姓名、电话、地址等隐私信息；解读在本机生成，不会上传。</view>
     </view>
     <button class="btn-primary" hover-class="btn-hover" bindtap="roll">帮我找</button>
   </block>
 
+  <!-- ═══ 落宫动画 ═══ -->
   <view wx:if="{{isDrawing}}" class="draw-wrap" bindtap="skipAnim">
     <view class="ext-grid" style="width:560rpx;">
       <view class="ext-cell" wx:for="{{palms}}" wx:key="idx">
@@ -25,31 +29,69 @@
     <view class="draw-skip">点击任意位置跳过</view>
   </view>
 
-  <block wx:if="{{hasResult}}">
+  <!-- ═══ 白话互动解读 ═══ -->
+  <block wx:if="{{hasResult && reading}}">
     <view class="ext-hero">
-      <view class="t">{{result.tone}} · {{result.trad}}</view>
-      <view class="s">{{item}}</view>
+      <view class="s">{{reading.item || '你想找的东西'}}</view>
     </view>
+
+    <!-- ① 先问一句 -->
     <view class="ext-card">
-      <view class="ext-kv">
-        <view class="ext-k">方位</view>
-        <view class="ext-v">{{result.dir}} <text class="ext-alt" wx:if="{{result.dirAlt}}">（{{result.dirAlt}}）</text></view>
-      </view>
-      <view class="ext-kv">
-        <view class="ext-k">应期</view>
-        <view class="ext-v">{{result.timing}}</view>
+      <view class="ext-label">你现在最想先弄清楚哪一点？</view>
+      <view class="chip-wrap">
+        <view class="chip {{item.on ? 'on' : ''}}" wx:for="{{focusList}}" wx:key="key" data-key="{{item.key}}" bindtap="onFocus">{{item.label}}</view>
       </view>
     </view>
+
+    <!-- ② 白话结论打头 -->
+    <view class="res-headline">{{reading.headline}}</view>
+
+    <!-- ③ 分层展开 -->
     <view class="ext-card">
-      <view class="ext-label">口诀</view>
-      <view class="ext-verse">{{result.verse}}</view>
+      <view class="layer" wx:for="{{reading.layers}}" wx:key="t">
+        <view class="layer-head" data-idx="{{index}}" bindtap="toggleLayer" hover-class="row-hover">
+          <text class="layer-t">{{item.t}}</text>
+          <text class="layer-arrow">{{item.open ? '▾' : '▸'}}</text>
+        </view>
+        <view class="layer-x" wx:if="{{item.open}}">{{item.x}}</view>
+      </view>
+      <button class="btn-ghost btn-sm" style="display:block;margin:16rpx auto 0;" hover-class="btn-hover" wx:if="{{hasMoreLayer}}" bindtap="openNextLayer">继续看下一层</button>
     </view>
+
+    <!-- ④ 现在做一件事 -->
+    <view class="ext-card close-card">
+      <view class="sec-label">现在做一件事</view>
+      <view class="close-text">{{reading.closing}}</view>
+    </view>
+
+    <!-- ⑤ 追问 -->
     <view class="ext-card">
-      <view class="ext-label">怎么找</view>
-      <view class="ext-read">{{result.read}}</view>
+      <view class="ext-label">你可能还想问</view>
+      <view class="fq" wx:for="{{reading.followups}}" wx:key="q">
+        <view class="fq-q" data-idx="{{index}}" bindtap="toggleFollowup" hover-class="row-hover">
+          <text class="fq-qt">{{item.q}}</text>
+          <text class="layer-arrow">{{item.open ? '▾' : '▸'}}</text>
+        </view>
+        <view class="fq-a" wx:if="{{item.open}}">{{item.a}}</view>
+      </view>
     </view>
+
+    <!-- ⑥ 传统依据（默认收起）-->
+    <view class="ext-card">
+      <view class="row" bindtap="toggleTrad" hover-class="row-hover">
+        <text>📖 查看传统依据</text>
+        <text class="muted" style="margin:0;">{{tradOpen ? '收起' : '展开'}}</text>
+      </view>
+      <view class="trad-box" wx:if="{{tradOpen}}">
+        <view class="trad-name">{{reading.trad.tone}} · {{reading.trad.name}}</view>
+        <view class="trad-sub">方位：{{reading.trad.dir}}<text wx:if="{{reading.trad.dirAlt}}">（{{reading.trad.dirAlt}}）</text></view>
+        <view class="trad-sub">应期：{{reading.trad.timing}}</view>
+        <view class="trad-verse">{{reading.trad.verse}}</view>
+        <view class="trad-note">以上是传统说法，上面已经把它翻成白话了，请以白话部分为准。</view>
+      </view>
+    </view>
+
     <view class="ext-warn">⚠️ 传统术数内容，仅供参考，请勿用于重要决策。</view>
-    <button class="btn-primary" hover-class="btn-hover" bindtap="again">再找一次</button>
-    <button class="btn-ghost" hover-class="btn-hover" bindtap="again">‹ 换一件</button>
+    <button class="btn-primary" hover-class="btn-hover" bindtap="again">换一样东西</button>
   </block>
 </view>
