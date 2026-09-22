@@ -24,7 +24,6 @@ const BACKUP = path.join(ROOT, '.publish-backup');
 const EXT_PAGES = ['pages/zzj/lost', 'pages/zzj/future'];
 const EXT_FILES = [
   'miniprogram/data/zzj-ext.js',
-  'miniprogram/data/zzj-read.js',
   'miniprogram/pages/zzj/ext.wxss',
   'miniprogram/pages/zzj/lost.js',
   'miniprogram/pages/zzj/lost.wxml',

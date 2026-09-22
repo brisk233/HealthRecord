@@ -1,4 +1,5 @@
 const zzj = require('../../data/zhangzhongjue.js');
+const READ = require('../../data/zzj-read.js');
 // EXT:BEGIN —— 扩展层：上架构建时本区块连同 pages/zzj/lost|future 一并移除
 const EXT = require('../../data/zzj-ext.js');
 // EXT:END
@@ -36,6 +37,11 @@ Page({
     selCount: 0,
     rollReady: false,
     picked: '',
+    reading: null,          // 白话互动解读（zzj-read.buildDecision）
+    focusList: [],          // 关注点 chips
+    hasMoreLayer: false,    // 是否还有未展开的层
+    tradOpen: false,        // 六宫出处是否展开（默认收起，不打扰用户）
+    disclaimer: '',
     result: null,
     palms: [],
     animIdx: -1,
@@ -200,13 +206,15 @@ Page({
     this.setData({
       stage: 'scene', isScene: true, isInput: false, isDrawing: false, isResult: false,
       scene: null, options: ['', ''], canAdd: true, mode: 'preset', presets: [], selCount: 0,
-      rollReady: false, animLabel: ''
+      rollReady: false, animLabel: '', reading: null, tradOpen: false
     });
+    this.focusKey = 'result';
     this.buildPalms(-1);
   },
   backToInput() {
     this.clearTimers();
-    this.setData({ stage: 'input', isScene: false, isInput: true, isDrawing: false, isResult: false, animLabel: '' });
+    this.focusKey = 'result';
+    this.setData({ stage: 'input', isScene: false, isInput: true, isDrawing: false, isResult: false, animLabel: '', reading: null, tradOpen: false });
     this.buildPalms(-1);
   },
 
@@ -254,8 +262,69 @@ Page({
       picked: pickedText, tone: r.tone, trad: r.trad, done: false, idx: pick.result
     };
     this.curRecord = rec;
-    this.setData({ stage: 'result', isScene: false, isInput: false, isDrawing: false, isResult: true, result: r, picked: pickedText, animLabel: '' });
+    this.focusKey = 'result';
+    this.setData({
+      stage: 'result', isScene: false, isInput: false, isDrawing: false, isResult: true,
+      result: r, picked: pickedText, animLabel: '', tradOpen: false
+    });
+    this.buildReading(pickedText);
   },
+
+  // ── 白话互动解读 ─────────────────────────────────────
+  // 不打头展示宫位名，先说白话结论；用户可换关注点、逐层展开、追问
+  buildReading(pickedText) {
+    const key = this.focusKey || 'result';
+    const reading = READ.buildDecision(this.pick, key, pickedText, this.data.sceneLabel);
+    const focusList = READ.FOCUS.map(function (f) {
+      return { key: f.key, label: f.label, on: f.key === key };
+    });
+    this.setData({
+      reading: reading,
+      focusList: focusList,
+      hasMoreLayer: reading.layers.some(function (l) { return !l.open; }),
+      disclaimer: zzj.DISCLAIMER
+    });
+  },
+
+  onFocus(e) {
+    this.focusKey = e.currentTarget.dataset.key;
+    this.buildReading(this.data.picked);
+  },
+
+  toggleLayer(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const layers = this.data.reading.layers.map(function (l, i) {
+      return { t: l.t, x: l.x, open: i === idx ? !l.open : l.open };
+    });
+    this.setData({
+      reading: Object.assign({}, this.data.reading, { layers: layers }),
+      hasMoreLayer: layers.some(function (l) { return !l.open; })
+    });
+  },
+
+  openNextLayer() {
+    const layers = this.data.reading.layers;
+    let target = -1;
+    for (let i = 0; i < layers.length; i++) { if (!layers[i].open) { target = i; break; } }
+    if (target === -1) return;
+    const opened = layers.map(function (l, i) {
+      return { t: l.t, x: l.x, open: i <= target ? true : l.open };
+    });
+    this.setData({
+      reading: Object.assign({}, this.data.reading, { layers: opened }),
+      hasMoreLayer: opened.some(function (l) { return !l.open; })
+    });
+  },
+
+  toggleFollowup(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const followups = this.data.reading.followups.map(function (f, i) {
+      return { q: f.q, a: f.a, open: i === idx ? !f.open : f.open };
+    });
+    this.setData({ reading: Object.assign({}, this.data.reading, { followups: followups }) });
+  },
+
+  toggleTrad() { this.setData({ tradOpen: !this.data.tradOpen }); },
 
   // ── 再来一次（同题同日限 3 次）────────────────────────
   rerollState() {

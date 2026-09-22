@@ -101,36 +101,83 @@
     <view class="draw-skip">点击任意位置跳过</view>
   </view>
 
-  <!-- ═══ 状态 4 · 结果 ═══ -->
-  <block wx:if="{{isResult}}">
-    <view class="res-hero">
-      <view class="res-tone">{{result.tone}} · {{result.trad}}</view>
-      <view class="res-tagline">{{result.tagline}}</view>
-    </view>
+  <!-- ═══ 状态 4 · 结果（白话互动解读，宫位名收在页脚）═══ -->
+  <block wx:if="{{isResult && reading}}">
 
+    <view class="pick-chip">你选的是 <text class="pick-strong">{{reading.picked}}</text></view>
+
+    <!-- ① 先问一句：你现在最想确认什么 -->
     <view class="card">
-      <view class="sec-label">选择</view>
-      <view class="picked-box">{{picked}}</view>
+      <view class="card-title">你现在最想确认什么？</view>
+      <view class="chip-wrap">
+        <view class="chip {{item.on ? 'on' : ''}}" wx:for="{{focusList}}" wx:key="key" data-key="{{item.key}}" bindtap="onFocus">{{item.label}}</view>
+      </view>
     </view>
 
+    <!-- ② 白话结论打头（不是术语）-->
+    <view class="res-headline">{{reading.headline}}</view>
+
+    <!-- ③ 分层展开 -->
     <view class="card">
-      <view class="sec-label">为什么</view>
-      <view class="why-text">{{result.why}}</view>
+      <view class="layer" wx:for="{{reading.layers}}" wx:key="t">
+        <view class="layer-head" data-idx="{{index}}" bindtap="toggleLayer" hover-class="row-hover">
+          <text class="layer-t">{{item.t}}</text>
+          <text class="layer-arrow">{{item.open ? '▾' : '▸'}}</text>
+        </view>
+        <view class="layer-x" wx:if="{{item.open}}">{{item.x}}</view>
+      </view>
+      <button class="btn-ghost btn-sm" style="display:block;margin:16rpx auto 0;" hover-class="btn-hover" wx:if="{{hasMoreLayer}}" bindtap="openNextLayer">继续看下一层</button>
     </view>
 
-    <view class="card next-card">
-      <view class="sec-label">下一步</view>
-      <view class="next-text">{{result.next}}</view>
+    <!-- ④ 今天做一件事 -->
+    <view class="card close-card">
+      <view class="sec-label">今天做一件事</view>
+      <view class="close-text">{{reading.closing}}</view>
     </view>
 
-    <view class="disclaimer">{{result.disclaimer}}</view>
+    <!-- ⑤ 三个具体动作 -->
+    <view class="card">
+      <view class="card-title">可以做的三件事</view>
+      <view class="act-row" wx:for="{{reading.actions}}" wx:key="*this">
+        <view class="act-no">{{index + 1}}</view>
+        <text class="act-x">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- ⑥ 追问 -->
+    <view class="card">
+      <view class="card-title">你可能还想问</view>
+      <view class="fq" wx:for="{{reading.followups}}" wx:key="q">
+        <view class="fq-q" data-idx="{{index}}" bindtap="toggleFollowup" hover-class="row-hover">
+          <text class="fq-qt">{{item.q}}</text>
+          <text class="layer-arrow">{{item.open ? '▾' : '▸'}}</text>
+        </view>
+        <view class="fq-a" wx:if="{{item.open}}">{{item.a}}</view>
+      </view>
+    </view>
+
+    <!-- ⑦ 六宫出处（默认收起，不打扰用户）-->
+    <view class="card">
+      <view class="row" bindtap="toggleTrad" hover-class="row-hover">
+        <text>📖 查看六宫出处</text>
+        <text class="muted" style="margin:0;">{{tradOpen ? '收起' : '展开'}}</text>
+      </view>
+      <view class="trad-box" wx:if="{{tradOpen}}">
+        <view class="trad-name">{{reading.trad.tone}} · {{reading.trad.name}}</view>
+        <view class="trad-tagline">{{reading.trad.tagline}}</view>
+        <view class="trad-sub">{{reading.trad.element}} · {{reading.trad.dir}}</view>
+        <view class="trad-note">这是传统六宫里的说法，上面已经把它翻成白话了。</view>
+      </view>
+    </view>
+
+    <view class="disclaimer">{{disclaimer}}</view>
 
     <button class="btn-primary" hover-class="btn-hover" bindtap="onConfirm">就这么定了</button>
     <button class="btn-ghost" hover-class="btn-hover" bindtap="onReroll">再来一次</button>
     <button class="btn-ghost" hover-class="btn-hover" style="margin-top:24rpx !important;" bindtap="backToInput">‹ 改选项</button>
   </block>
 
-  <view class="palm-anchor" wx:if="{{isResult}}">
+  <view class="palm-anchor" wx:if="{{isResult && reading}}">
     <view class="palm-mini">
       <view class="palm-cell" wx:for="{{palms}}" wx:key="idx">
         <view class="palm-dot {{item.on ? 'on' : ''}} mini">
@@ -138,6 +185,7 @@
         </view>
       </view>
     </view>
+    <view class="palm-caption">{{reading.trad.tone}} · {{reading.trad.name}}</view>
   </view>
 
 </view>

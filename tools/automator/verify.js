@@ -62,19 +62,20 @@ async function tapByText(page, sel, want) {
 
   await miniProgram.screenshot({ path: path.join(SHOTS, '1-scene.png') });
 
-  // ═══ 2. 填选项 ═══
-  console.log('\n== 2. 填选项 ==');
-  await miniProgram.screenshot({ path: path.join(SHOTS, '2-input.png') });
+  // ═══ 2. 选选项（预置直选）═══
+  console.log('\n== 2. 选选项（预置直选）==');
   const clicked = await tapByText(page, '.scene-item', '今天吃什么');
   check('点击「今天吃什么」', clicked);
-  await page.waitFor(800);
+  await page.waitFor(900);
 
-  const inputs = await page.$$('.opt-input');
-  check('进入填选项状态（3 个输入框）', inputs.length === 3, String(inputs.length));
-
-  await inputs[0].input('火锅');
-  await inputs[1].input('日料');
-  await sleep(400);
+  const presets = await page.$$('.opt-chip');
+  check('预置选项直接可点', presets.length >= 6, presets.length + ' 个');
+  await tapByText(page, '.opt-chip', '火锅');
+  await tapByText(page, '.opt-chip', '日料');
+  await sleep(500);
+  const selOn = await page.$$('.opt-chip.on');
+  check('已选中 2 个选项', selOn.length === 2, selOn.length + ' 个');
+  await miniProgram.screenshot({ path: path.join(SHOTS, '2-input.png') });
 
   // ═══ 3. 落宫动画 ═══
   console.log('\n== 3. 落宫动画 ==');
@@ -95,18 +96,48 @@ async function tapByText(page, sel, want) {
 
   // ═══ 4. 结果页 ═══
   console.log('\n== 4. 结果页 ==');
-  const picked = await textOf(page, '.picked-box');
+  const picked = await textOf(page, '.pick-strong');
   check('显示抽中的选项', picked === '火锅' || picked === '日料', picked || '(空)');
 
-  const tone = await textOf(page, '.res-tone');
-  const re = /^(稳|缠|快|争|合|空) · (大安|留连|速喜|赤口|小吉|空亡)$/;
-  check('结果宫位合法', !!tone && re.test(tone), tone || '(空)');
+  // ── 核心：白话结论打头，不把术语甩给用户 ──
+  const headline = await textOf(page, '.res-headline');
+  check('白话结论打头', !!headline && headline.length > 8, (headline || '').slice(0, 22) + '…');
+  const NAME_RE = /大安|留连|速喜|赤口|小吉|空亡/;
+  check('结论里不含宫位名', !!headline && !NAME_RE.test(headline));
 
-  const why = await textOf(page, '.why-text');
-  check('「为什么」文案非空', !!why && why.length > 20, (why || '').slice(0, 24) + '…');
+  const focusChips = await page.$$('.chip');
+  check('关注点可切换（4 个）', focusChips.length === 4, focusChips.length + ' 个');
 
-  const next = await textOf(page, '.next-text');
-  check('「下一步」行动建议非空', !!next && next.length > 4, next || '(空)');
+  const layers = await page.$$('.layer');
+  check('分层解读 3 层', layers.length === 3, layers.length + ' 层');
+  const openA = await page.$$('.layer-x');
+  check('默认只展开第一层', openA.length === 1, openA.length + ' 层展开');
+
+  await tapByText(page, 'button', '继续看下一层');
+  await sleep(600);
+  const openB = await page.$$('.layer-x');
+  check('可逐层展开', openB.length === 2, openB.length + ' 层展开');
+
+  const closing = await textOf(page, '.close-text');
+  check('有「今天做一件事」', !!closing && closing.indexOf('今天') !== -1, (closing || '').slice(0, 20));
+
+  const acts = await page.$$('.act-row');
+  check('三个具体动作', acts.length === 3, acts.length + ' 条');
+
+  const fqs = await page.$$('.fq');
+  check('可追问 4 条', fqs.length === 4, fqs.length + ' 条');
+
+  await tapByText(page, '.chip', '大概什么时候');
+  await sleep(600);
+  const headline2 = await textOf(page, '.res-headline');
+  check('换关注点后结论变化', !!headline2 && headline2 !== headline, (headline2 || '').slice(0, 22) + '…');
+
+  const tradBefore = await page.$('.trad-box');
+  check('六宫出处默认收起', !tradBefore);
+  await tapByText(page, '.row', '查看六宫出处');
+  await sleep(500);
+  const tradName = await textOf(page, '.trad-name');
+  check('可展开六宫出处', !!tradName && NAME_RE.test(tradName), tradName || '(空)');
 
   const disc = await textOf(page, '.disclaimer');
   check('常驻「随机提示」说明', !!disc && disc.indexOf('随机提示') !== -1, (disc || '').slice(0, 30));
@@ -164,9 +195,16 @@ async function tapByText(page, sel, want) {
   await sleep(500);
   const fdraw = await fp.$('.draw-wrap');
   if (fdraw) await fdraw.tap();
+  await fp.waitFor(1500);
+
+  // 走向会先问一句「你最想先弄清楚哪一点」
+  const focusItems = await fp.$$('.ext-focus');
+  check('走向先问关注点（4 个）', focusItems.length === 4, focusItems.length + ' 个');
+  if (focusItems.length) await focusItems[0].tap();
   await fp.waitFor(1200);
+
   const stages = await fp.$$('.ext-stage');
-  check('走向显示三宫', stages.length === 3, stages.length + ' 个');
+  check('走向显示三层', stages.length === 3, stages.length + ' 个');
   if (stages.length === 3) {
     const heads = [];
     for (const s of stages) { heads.push((await s.text()).replace(/\s+/g, ' ').slice(0, 12)); }
