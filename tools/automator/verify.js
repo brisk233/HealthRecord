@@ -47,7 +47,7 @@ async function tapByText(page, sel, want) {
   // ═══ 1. 主页面：场景选择 ═══
   console.log('== 1. 主页面 · 场景选择 ==');
   const page = await miniProgram.navigateTo('/pages/zzj/zzj');
-  await page.waitFor(2000);
+  await page.waitFor(9000);   // 本机开发者工具较慢，首帧可能 7-9 秒
 
   const title = await textOf(page, '.hero .date');
   check('主页面标题渲染', title === '掌中决', title || '(空)');
